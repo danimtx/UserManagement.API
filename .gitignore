@@ -1,0 +1,17 @@
+# Ignorar credenciales de Firebase
+firebase_credentials.json
+firebase_credentials.json
+*.json
+!appsettings.json
+!appsettings.Development.json
+
+# Ignorar carpetas de compilación
+bin/
+obj/
+.vs/
+.vscode/
+
+# Ignorar archivos de usuario
+*.user
+*.suo
+

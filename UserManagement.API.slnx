@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="UserManagement.API/UserManagement.API.csproj" />
+  <Project Path="UserManagement.Application/UserManagement.Application.csproj" />
+  <Project Path="UserManagement.Domain/UserManagement.Domain.csproj" />
+  <Project Path="UserManagement.Infrastructure/UserManagement.Infrastructure.csproj" />
+</Solution>
