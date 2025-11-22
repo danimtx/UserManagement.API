@@ -21,7 +21,7 @@ namespace UserManagement.Domain.Entities
         public string ApellidoPaterno { get; set; } = string.Empty;
 
         [FirestoreProperty]
-        public string? ApellidoMaterno { get; set; } // Los nulos también se pueden marcar
+        public string? ApellidoMaterno { get; set; }
 
         [FirestoreProperty]
         public string Pais { get; set; } = string.Empty;
@@ -31,8 +31,10 @@ namespace UserManagement.Domain.Entities
 
         [FirestoreProperty]
         public string Profesion { get; set; } = string.Empty;
+        [FirestoreProperty]
+        public string TipoCuenta { get; set; } = string.Empty; // Ej: "Empresarial", "Personal"
 
         [FirestoreProperty]
-        public List<string> RubrosHabilitados { get; set; } = new List<string>();
+        public List<string> ModulosPermitidos { get; set; } = new List<string>();
     }
 }

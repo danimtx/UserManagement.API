@@ -8,6 +8,7 @@ namespace UserManagement.Application.DTOs
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public string RubroSeleccionado { get; set; } = string.Empty;
+        public string ModuloSeleccionado { get; set; } = string.Empty;
+
     }
 }

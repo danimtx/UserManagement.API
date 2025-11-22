@@ -15,5 +15,6 @@ namespace UserManagement.Application.DTOs
         public string Pais { get; set; } = string.Empty;
         public string Departamento { get; set; } = string.Empty;
         public string Profesion { get; set; } = string.Empty;
+        public string TipoCuenta { get; set; } = string.Empty; // Ej: "Empresarial", "Personal"
     }
 }

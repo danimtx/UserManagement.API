@@ -49,7 +49,8 @@ namespace UserManagement.Infrastructure.Services
                 Pais = dto.Pais,
                 Departamento = dto.Departamento,
                 Profesion = dto.Profesion,
-                RubrosHabilitados = new List<string>() { "general" }
+                TipoCuenta = dto.TipoCuenta,
+                ModulosPermitidos = new List<string>() { "ninguno" }
             };
 
             DocumentReference docRef = _firestoreDb.Collection("users").Document(userRecord.Uid);
@@ -89,16 +90,16 @@ namespace UserManagement.Infrastructure.Services
             User user = snapshot.ConvertTo<User>();
 
             // Verificar rubro (ignoramos mayúsculas/minúsculas)
-            if (!user.RubrosHabilitados.Any(r => r.Equals(dto.RubroSeleccionado, StringComparison.OrdinalIgnoreCase))
-                && dto.RubroSeleccionado.ToLower() != "general")
+            if (!user.ModulosPermitidos.Any(r => r.Equals(dto.ModuloSeleccionado, StringComparison.OrdinalIgnoreCase))
+                && dto.ModuloSeleccionado.ToLower() != "general")
             {
-                throw new UnauthorizedAccessException($"No tienes acceso al rubro: {dto.RubroSeleccionado}");
+                throw new UnauthorizedAccessException($"No tienes acceso al rubro: {dto.ModuloSeleccionado}");
             }
 
             // 3. Generar Token Personalizado para devolver al frontend
             var claims = new Dictionary<string, object>
             {
-                { "rubro_actual", dto.RubroSeleccionado },
+                { "rubro_actual", dto.ModuloSeleccionado },
                 { "profesion", user.Profesion }
             };
 
