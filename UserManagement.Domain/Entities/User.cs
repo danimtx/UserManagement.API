@@ -32,7 +32,7 @@ namespace UserManagement.Domain.Entities
         [FirestoreProperty]
         public string Profesion { get; set; } = string.Empty;
         [FirestoreProperty]
-        public string TipoCuenta { get; set; } = string.Empty; // Ej: "Empresarial", "Personal"
+        public string TipoCuenta { get; set; } = string.Empty; // Ej: "Empresarial", "Personal", "Admin"
 
         [FirestoreProperty]
         public List<string> ModulosPermitidos { get; set; } = new List<string>();
