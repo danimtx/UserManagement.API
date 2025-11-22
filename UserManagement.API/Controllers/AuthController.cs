@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using UserManagement.Application.DTOs;
+using UserManagement.Application.DTOs.Auth;
 using UserManagement.Application.Interfaces;
 
 namespace UserManagement.API.Controllers
@@ -10,58 +10,86 @@ namespace UserManagement.API.Controllers
     {
         private readonly IAuthService _authService;
 
-        // Constructor: Inyectamos la interfaz IAuthService que definimos en la Capa de Aplicación
+        // Inyectamos el servicio que definimos antes
         public AuthController(IAuthService authService)
         {
             _authService = authService;
         }
 
-        // POST: api/auth/register
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterUserDto dto)
+        // =================================================
+        // ENDPOINT: Registro de Persona Natural
+        // URL: POST /api/auth/register/personal
+        // =================================================
+        [HttpPost("register/personal")]
+        public async Task<IActionResult> RegisterPersonal([FromBody] RegisterPersonalDto dto)
         {
-            // 1. Validación rápida: ¿Coinciden las contraseñas?
-            if (dto.Password != dto.ConfirmPassword)
-            {
-                return BadRequest(new { message = "Las contraseñas no coinciden." });
-            }
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             try
             {
-                // 2. Llamamos al servicio (Infrastructure -> Firebase)
-                var userId = await _authService.RegisterAsync(dto);
+                string userId = await _authService.RegisterPersonalAsync(dto);
 
-                // 3. Retornamos éxito (200 OK)
-                return Ok(new { message = "Usuario registrado exitosamente", userId = userId });
+                // Retornamos 201 Created y el ID del usuario creado
+                return CreatedAtAction(nameof(Login), new { id = userId }, new { message = "Cuenta personal creada exitosamente", userId });
             }
             catch (Exception ex)
             {
-                // Si algo falla (ej: el correo ya existe), retornamos BadRequest (400)
+                // En producción no debes devolver ex.Message directo por seguridad, 
+                // pero para desarrollo es útil ver el error de Firebase.
                 return BadRequest(new { error = ex.Message });
             }
         }
 
-        // POST: api/auth/login
+        // =================================================
+        // ENDPOINT: Registro de Empresa
+        // URL: POST /api/auth/register/company
+        // =================================================
+        [HttpPost("register/company")]
+        public async Task<IActionResult> RegisterCompany([FromBody] RegisterCompanyDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                string userId = await _authService.RegisterCompanyAsync(dto);
+
+                // Mensaje diferenciado para avisar que está pendiente de revisión
+                return CreatedAtAction(nameof(Login), new { id = userId }, new
+                {
+                    message = "Cuenta de empresa registrada. Pendiente de validación por el Administrador.",
+                    userId,
+                    status = "Pendiente"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        // =================================================
+        // ENDPOINT: Iniciar Sesión
+        // URL: POST /api/auth/login
+        // =================================================
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             try
             {
-                // 1. Intentamos loguear y obtener el token
-                var token = await _authService.LoginAsync(dto);
-
-                // 2. Retornamos el token (200 OK)
-                return Ok(new { token = token });
+                // Esto lanzará la excepción "NotImplemented" que pusimos antes,
+                // pero ya dejamos la ruta lista.
+                string token = await _authService.LoginAsync(dto);
+                return Ok(new { token });
             }
-            catch (UnauthorizedAccessException ex)
+            catch (NotImplementedException)
             {
-                // Si la contraseña está mal o el rubro no es permitido -> 401 Unauthorized
-                return Unauthorized(new { error = ex.Message });
+                return StatusCode(501, "El login desde backend está pendiente de configuración API Key. Usa login desde Frontend por ahora.");
             }
             catch (Exception ex)
             {
-                // Otros errores -> 400 BadRequest
-                return BadRequest(new { error = ex.Message });
+                return Unauthorized(new { error = ex.Message });
             }
         }
     }
