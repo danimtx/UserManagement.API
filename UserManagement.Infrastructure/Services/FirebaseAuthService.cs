@@ -1,9 +1,9 @@
 ﻿using FirebaseAdmin.Auth;
 using Google.Cloud.Firestore;
-using Microsoft.Extensions.Configuration; // <--- NECESARIO PARA LEER APPSETTINGS
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Net.Http.Json; // <--- NECESARIO PARA PETICIONES HTTP A GOOGLE
+using System.Net.Http.Json; 
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Auth;
 using UserManagement.Application.Interfaces;
@@ -36,6 +36,11 @@ namespace UserManagement.Infrastructure.Services
         // =========================================================
         public async Task<string> RegisterPersonalAsync(RegisterPersonalDto dto)
         {
+            if (dto.Password != dto.ConfirmPassword)
+            {
+                // Lanzamos una excepción que el Controlador capturará y devolverá como BadRequest
+                throw new ArgumentException("Las contraseñas ingresadas no coinciden.");
+            }
             // A. Crear usuario en Firebase Authentication (Solo Credenciales)
             var userArgs = new UserRecordArgs
             {
@@ -65,7 +70,6 @@ namespace UserManagement.Infrastructure.Services
                     ApellidoMaterno = dto.ApellidoMaterno ?? "",
                     FechaNacimiento = dto.FechaNacimiento,
                     CI = dto.CI,
-                    CIComplemento = dto.CIComplemento,
                     Pais = dto.Pais,
                     Departamento = dto.Departamento,
                     Direccion = dto.Direccion,
@@ -137,7 +141,6 @@ namespace UserManagement.Infrastructure.Services
                         ApellidoPaterno = dto.Representante.ApellidoPaterno,
                         ApellidoMaterno = dto.Representante.ApellidoMaterno,
                         CI = dto.Representante.CI,
-                        CIComplemento = dto.Representante.CIComplemento,
                         FechaNacimiento = dto.Representante.FechaNacimiento,
                         DireccionDomicilio = dto.Representante.DireccionDomicilio,
                         EmailPersonal = dto.Representante.EmailPersonal,

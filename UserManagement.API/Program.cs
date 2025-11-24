@@ -1,30 +1,25 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
-using Google.Cloud.Firestore; // <--- NECESARIO
+using Google.Cloud.Firestore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using UserManagement.Application.Interfaces;
 using UserManagement.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ==============================================
-// 1. CONFIGURACIÓN DE CREDENCIALES
-// ==============================================
+//CONFIGURACIÓN DE FIREBASE
 var firebaseCredentialPath = Path.Combine(Directory.GetCurrentDirectory(), "firebase_credentials.json");
-
-// Validación de seguridad: Que el archivo exista
 if (!File.Exists(firebaseCredentialPath))
 {
     throw new FileNotFoundException($"No se encontró el archivo JSON en: {firebaseCredentialPath}");
 }
-
-// Variable de entorno para las librerías de Google
 Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", firebaseCredentialPath);
 
-// ==============================================
-// 2. INICIALIZACIÓN DE SERVICIOS GOOGLE
-// ==============================================
-
-// A. Firebase Auth
+//INICIALIZACIÓN DE SERVICIOS GOOGLE
+//Firebase Auth
 if (FirebaseApp.DefaultInstance == null)
 {
     FirebaseApp.Create(new AppOptions()
@@ -33,45 +28,81 @@ if (FirebaseApp.DefaultInstance == null)
     });
 }
 
-// B. Firestore (BASE DE DATOS) - ¡ESTO FALTABA!
-// Registramos FirestoreDb como Singleton para que esté disponible en toda la app.
-// Usamos tu Project ID exacto.
-builder.Services.AddSingleton(FirestoreDb.Create("usermanagement-9a721"));
+string projectId = builder.Configuration["Firebase:ProjectId"];
+builder.Services.AddSingleton(FirestoreDb.Create(projectId));
 
 
-// ==============================================
-// 3. INYECCIÓN DE DEPENDENCIAS
-// ==============================================
+
+//INYECCIÓN DE DEPENDENCIAS
 builder.Services.AddHttpClient();
-// Ahora sí funcionará porque ya registramos FirestoreDb arriba
 builder.Services.AddScoped<IAuthService, FirebaseAuthService>();
-
-// Inyectamos el servicio de Admin para que el controlador pueda usarlo
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
 
-// ==============================================
-// 4. CONFIGURACIÓN DE API Y SWAGGER
-// ==============================================
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = $"https://securetoken.google.com/{projectId}";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = $"https://securetoken.google.com/{projectId}",
+            ValidateAudience = true,
+            ValidAudience = projectId,
+            ValidateLifetime = true
+        };
+    });
+
+
+//CONFIGURACIÓN DE API Y SWAGGER
 builder.Services.AddControllers();
 
-// Usaremos SwaggerGen en lugar de OpenApi básico para tener la interfaz gráfica de prueba
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "UserManagement API", Version = "v1" });
+
+    // Definir esquema de seguridad (Bearer Token)
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header,
+            },
+            new List<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
-// ==============================================
-// 5. PIPELINE HTTP
-// ==============================================
 if (app.Environment.IsDevelopment())
 {
-    // Habilitamos la UI de Swagger para probar visualmente
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection(); // Comentado por ahora para evitar problemas de puerto local
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
