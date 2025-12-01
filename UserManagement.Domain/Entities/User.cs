@@ -10,6 +10,7 @@ namespace UserManagement.Domain.Entities
     {
         public string Id { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? UserName { get; set; }
         public string TipoUsuario { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
         public DateTime FechaRegistro { get; set; }

@@ -92,5 +92,18 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
                 .Select(d => ToDomain(d.ConvertTo<UserDocument>()))
                 .ToList();
         }
+        public async Task<User?> GetByUserNameAsync(string username)
+        {
+            var query = _firestoreDb.Collection(CollectionName)
+                .WhereEqualTo("UserName", username)
+                .Limit(1);
+
+            var snapshot = await query.GetSnapshotAsync();
+
+            if (snapshot.Count == 0) return null;
+
+            var document = snapshot.Documents[0].ConvertTo<UserDocument>();
+            return ToDomain(document);
+        }
     }
 }

@@ -10,6 +10,7 @@ namespace UserManagement.Infrastructure.Persistence.Models
     {
         [FirestoreProperty] public string Id { get; set; } = string.Empty;
         [FirestoreProperty] public string Email { get; set; } = string.Empty;
+        [FirestoreProperty] public string? UserName { get; set; }
         [FirestoreProperty] public string TipoUsuario { get; set; } = string.Empty;
         [FirestoreProperty] public string Estado { get; set; } = string.Empty;
         [FirestoreProperty] public DateTime FechaRegistro { get; set; }

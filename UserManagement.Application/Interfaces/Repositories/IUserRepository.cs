@@ -13,5 +13,6 @@ namespace UserManagement.Application.Interfaces.Repositories
         Task UpdateAsync(User user);
         Task<List<User>> GetPendingCompaniesAsync();
         Task<List<User>> GetActivePersonalUsersAsync();
+        Task<User?> GetByUserNameAsync(string username);
     }
 }

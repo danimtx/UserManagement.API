@@ -26,6 +26,12 @@ namespace UserManagement.Application.Services
             if (dto.Password != dto.ConfirmPassword)
                 throw new ArgumentException("Las contraseñas ingresadas no coinciden.");
 
+            var usuarioExistente = await _userRepository.GetByUserNameAsync(dto.UserName);
+            if (usuarioExistente != null)
+            {
+                throw new ArgumentException($"El nombre de usuario '{dto.UserName}' ya está ocupado.");
+            }
+
             string createdUid = "";
 
             try
@@ -66,6 +72,7 @@ namespace UserManagement.Application.Services
                 {
                     Id = createdUid,
                     Email = dto.Email,
+                    UserName = dto.UserName,
                     TipoUsuario = UserType.Personal.ToString(),
                     Estado = UserStatus.Activo.ToString(),
                     FechaRegistro = DateTime.UtcNow,

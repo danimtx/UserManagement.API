@@ -25,6 +25,11 @@ namespace UserManagement.Application.Validators
 
             RuleFor(x => x.FechaNacimiento)
                 .LessThan(DateTime.Now.AddYears(-18)).WithMessage("El usuario debe ser mayor de edad.");
+
+            RuleFor(x => x.UserName)
+                .NotEmpty().WithMessage("El nombre de usuario es obligatorio.")
+                .MinimumLength(3).WithMessage("El usuario debe tener al menos 3 letras.")
+                .Matches("^[a-zA-Z0-9._]+$").WithMessage("El usuario solo puede contener letras, números, puntos o guiones bajos.");
         }
     }
 }
