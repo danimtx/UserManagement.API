@@ -8,9 +8,6 @@ namespace UserManagement.Application.DTOs.Auth
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-
-        // El usuario debe decir a qué módulo intenta entrar (ej: "Construccion")
-        // Esto es vital para validar permisos en el backend.
         public string ModuloSeleccionado { get; set; } = string.Empty;
     }
 }

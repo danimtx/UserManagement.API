@@ -1,44 +1,57 @@
-using FirebaseAdmin;
+Ôªøusing FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
-using UserManagement.Application.Interfaces;
+using UserManagement.Application.Interfaces.Repositories;
+using UserManagement.Application.Interfaces.Services;
+using UserManagement.Application.Services;
+using UserManagement.Infrastructure.Persistence.Repositories;
 using UserManagement.Infrastructure.Services;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using UserManagement.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//CONFIGURACI”N DE FIREBASE
 var firebaseCredentialPath = Path.Combine(Directory.GetCurrentDirectory(), "firebase_credentials.json");
+
 if (!File.Exists(firebaseCredentialPath))
 {
-    throw new FileNotFoundException($"No se encontrÛ el archivo JSON en: {firebaseCredentialPath}");
+    throw new FileNotFoundException($"No se encontr√≥ el archivo JSON en: {firebaseCredentialPath}");
 }
+
 Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", firebaseCredentialPath);
 
-//INICIALIZACI”N DE SERVICIOS GOOGLE
-//Firebase Auth
 if (FirebaseApp.DefaultInstance == null)
 {
+#pragma warning disable CS0618 
     FirebaseApp.Create(new AppOptions()
     {
         Credential = GoogleCredential.FromFile(firebaseCredentialPath)
     });
+#pragma warning restore CS0618
 }
 
 string projectId = builder.Configuration["Firebase:ProjectId"];
 builder.Services.AddSingleton(FirestoreDb.Create(projectId));
 
-
-
-//INYECCI”N DE DEPENDENCIAS
+// Infraestructura
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<IAuthService, FirebaseAuthService>();
+builder.Services.AddScoped<IIdentityProvider, FirebaseIdentityProvider>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+// Aplicaci√≥n
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 
+// Validadores
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterPersonalValidator>();
+
+//EGURIDAD (JWT)
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -54,19 +67,16 @@ builder.Services
         };
     });
 
-
-//CONFIGURACI”N DE API Y SWAGGER
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "UserManagement API", Version = "v1" });
 
-    // Definir esquema de seguridad (Bearer Token)
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Description = "JWT Authorization header. Example: \"Bearer 12345abcdef\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -99,8 +109,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-// app.UseHttpsRedirection(); // Comentado por ahora para evitar problemas de puerto local
 
 app.UseAuthentication();
 app.UseAuthorization();

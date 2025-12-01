@@ -1,5 +1,4 @@
-﻿using Google.Cloud.Firestore;
-using UserManagement.Domain.Enums;
+﻿using UserManagement.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,28 +13,28 @@ namespace UserManagement.Domain.Entities
         public string TipoUsuario { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
         public DateTime FechaRegistro { get; set; }
+
+        // Jerarquía
         public string? CreadoPorId { get; set; }
 
-        // --- PERFILES ESPECÍFICOS ---
+        // --- PERFILES ---
         public PersonalProfile? DatosPersonales { get; set; }
         public CompanyProfile? DatosEmpresa { get; set; }
 
-        // --- CONFIGURACIÓN DE PERMISOS (SEGÚN ROL) ---
+        // --- SUB-CUENTAS ---
+        public string? CuentaPadreId { get; set; }
 
-        // A. Para Empleados de Empresa (SubCuentaEmpresa)
+        public string? AreaTrabajo { get; set; }
+        public bool EsSuperAdminEmpresa { get; set; } = false;
+
         public SubAccountPermissions? PermisosEmpleado { get; set; }
-
-        // B. Para Administradores del Sistema (AdminSistema)
         public SystemAdminPermissions? PermisosAdminSistema { get; set; }
 
-        // --- ACCESO A PRODUCTOS Y PAGOS ---
-        // Módulos base activados: "Construccion", "Ferreteria", "Social", "Wallet"
+        // --- ACCESO GLOBAL ---
         public List<string> ModulosHabilitados { get; set; } = new();
-
-        // Funcionalidades PREMIUM (De pago): "AgenteIA_N8N", "ReportesAvanzados"
         public List<string> FuncionalidadesExtra { get; set; } = new();
-
-        // Inventario de IDs externos (Redes sociales, Wallets externas)
         public List<string> IdsRecursosExternos { get; set; } = new();
+
+        public List<string> IdsPerfilesSociales { get; set; } = new();
     }
 }

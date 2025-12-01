@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Company;
-using UserManagement.Application.Interfaces;
+using UserManagement.Application.Interfaces.Services;
 
 namespace UserManagement.API.Controllers
 {
@@ -20,26 +20,13 @@ namespace UserManagement.API.Controllers
             _companyService = companyService;
         }
 
-        // POST: api/CompanyManagement/employees
-        // Header: Authorization: Bearer <TOKEN_EMPRESA>
         [HttpPost("employees")]
-        public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto dto, [FromQuery] string companyId)
+        public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto dto)
         {
-            // TODO: En producción, 'companyId' NO viene por Query, 
-            // se extrae del Token JWT (User.Claims) por seguridad.
-            // Por ahora lo pedimos en Query para probar en Swagger.
-
-            if (string.IsNullOrEmpty(companyId))
-                return BadRequest("Se requiere el ID de la empresa.");
-            if (dto.FechaNacimiento.Kind != DateTimeKind.Utc)
-            {
-                dto.FechaNacimiento = dto.FechaNacimiento.ToUniversalTime();
-            }
-
-            if (dto.Permisos == null || dto.Permisos.Count == 0)
-            {
-                throw new Exception("Debe asignar al menos un permiso.");
-            }
+            // Extraer ID del token (Seguridad)
+            var userIdClaim = User.FindFirst("user_id") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized("No se pudo identificar a la empresa.");
+            string companyId = userIdClaim.Value;
 
             try
             {
@@ -52,11 +39,12 @@ namespace UserManagement.API.Controllers
             }
         }
 
-        // POST: api/CompanyManagement/areas
         [HttpPost("areas")]
-        public async Task<IActionResult> AddArea([FromBody] string areaName, [FromQuery] string companyId)
+        public async Task<IActionResult> AddArea([FromBody] string areaName)
         {
-            if (string.IsNullOrEmpty(companyId)) return BadRequest("Falta companyId");
+            var userIdClaim = User.FindFirst("user_id") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+            string companyId = userIdClaim.Value;
 
             try
             {

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using UserManagement.Application.DTOs.Auth;
-using UserManagement.Application.Interfaces;
+using UserManagement.Application.Interfaces.Services;
 
 namespace UserManagement.API.Controllers
 {
@@ -10,55 +10,38 @@ namespace UserManagement.API.Controllers
     {
         private readonly IAuthService _authService;
 
-        // Inyectamos el servicio que definimos antes
         public AuthController(IAuthService authService)
         {
             _authService = authService;
         }
 
-        // =================================================
-        // ENDPOINT: Registro de Persona Natural
-        // URL: POST /api/auth/register/personal
-        // =================================================
         [HttpPost("register/personal")]
         public async Task<IActionResult> RegisterPersonal([FromBody] RegisterPersonalDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 string userId = await _authService.RegisterPersonalAsync(dto);
-
-                // Retornamos 201 Created y el ID del usuario creado
-                return CreatedAtAction(nameof(Login), new { id = userId }, new { message = "Cuenta personal creada exitosamente", userId });
+                return Ok(new { message = "Cuenta personal creada exitosamente", userId });
             }
             catch (Exception ex)
             {
-                // En producción no debes devolver ex.Message directo por seguridad, 
-                // pero para desarrollo es útil ver el error de Firebase.
                 return BadRequest(new { error = ex.Message });
             }
         }
 
-        // =================================================
-        // ENDPOINT: Registro de Empresa
-        // URL: POST /api/auth/register/company
-        // =================================================
         [HttpPost("register/company")]
         public async Task<IActionResult> RegisterCompany([FromBody] RegisterCompanyDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 string userId = await _authService.RegisterCompanyAsync(dto);
-
-                // Mensaje diferenciado para avisar que está pendiente de revisión
-                return CreatedAtAction(nameof(Login), new { id = userId }, new
+                return Ok(new
                 {
-                    message = "Cuenta de empresa registrada. Pendiente de validación por el Administrador.",
+                    message = "Empresa registrada. Pendiente de validación.",
                     userId,
                     status = "Pendiente"
                 });
@@ -69,27 +52,21 @@ namespace UserManagement.API.Controllers
             }
         }
 
-        // =================================================
-        // ENDPOINT: Iniciar Sesión
-        // URL: POST /api/auth/login
-        // =================================================
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             try
             {
-                // Esto lanzará la excepción "NotImplemented" que pusimos antes,
-                // pero ya dejamos la ruta lista.
                 string token = await _authService.LoginAsync(dto);
                 return Ok(new { token });
             }
-            catch (NotImplementedException)
+            catch (UnauthorizedAccessException ex)
             {
-                return StatusCode(501, "El login desde backend está pendiente de configuración API Key. Usa login desde Frontend por ahora.");
+                return Unauthorized(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return Unauthorized(new { error = ex.Message });
+                return BadRequest(new { error = ex.Message });
             }
         }
     }

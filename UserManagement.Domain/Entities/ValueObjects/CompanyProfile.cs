@@ -12,16 +12,12 @@ namespace UserManagement.Domain.Entities.ValueObjects
 
         public LegalRepresentative Representante { get; set; } = new();
 
-        // Contactos Generales (Centralita)
         public string TelefonoFijo { get; set; } = string.Empty;
         public string CelularCorporativo { get; set; } = string.Empty;
 
         // --- MULTI-UBICACIÓN ---
-        // Ya no hay dirección aquí. Ahora hay una lista de sedes.
         public List<CompanyBranch> Sucursales { get; set; } = new();
 
-        // Documentos Legales de la Empresa (NIT, SEPREC, etc.)
-        // Aquí usamos la misma lógica nueva para ser consistentes y permitir validación por IA
         public List<UploadedDocument> DocumentosLegales { get; set; } = new();
 
         public List<string> AreasDefinidas { get; set; } = new List<string>() { "General" };

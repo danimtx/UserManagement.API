@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using UserManagement.Application.Interfaces;
+﻿using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using Google.Cloud.Firestore;
+using UserManagement.Application.Interfaces.Repositories;
+using UserManagement.Application.Interfaces.Services;
 using UserManagement.Domain.Entities;
 using UserManagement.Domain.Enums;
 
@@ -15,13 +16,12 @@ namespace UserManagement.API.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
-        private readonly FirestoreDb _firestoreDb;
+        private readonly IUserRepository _userRepository;
 
-        // Constructor: Aquí pedimos el servicio (Inyección de Dependencias)
-        public AdminController(IAdminService adminService, FirestoreDb firestoreDb)
+        public AdminController(IAdminService adminService, IUserRepository userRepository)
         {
             _adminService = adminService;
-            _firestoreDb = firestoreDb;
+            _userRepository = userRepository;
         }
         private async Task<bool> IsUserAdmin()
         {
@@ -29,31 +29,21 @@ namespace UserManagement.API.Controllers
             if (userIdClaim == null) return false;
             string uid = userIdClaim.Value;
 
-            var doc = await _firestoreDb.Collection("users").Document(uid).GetSnapshotAsync();
-            if (!doc.Exists) return false;
+            var user = await _userRepository.GetByIdAsync(uid);
+            if (user == null) return false;
 
-            var user = doc.ConvertTo<User>();
-
-            return user.TipoUsuario == UserType.AdminSistema.ToString();
+            return user.TipoUsuario == UserType.AdminSistema.ToString() ||
+                   user.TipoUsuario == UserType.SuperAdminGlobal.ToString();
         }
 
-        // =================================================
-        // ENDPOINT: Ver lista de empresas pendientes
-        // URL: GET /api/Admin/pending-companies
-        // =================================================
         [HttpGet("pending-companies")]
         public async Task<IActionResult> GetPendingCompanies()
         {
-            if (!await IsUserAdmin()) return Unauthorized("Acceso denegado. Se requieren permisos de Administrador.");
+            if (!await IsUserAdmin()) return Unauthorized("Acceso denegado.");
+
             try
             {
                 var result = await _adminService.GetPendingCompaniesAsync();
-
-                if (result == null || result.Count == 0)
-                {
-                    return Ok(new { message = "No hay empresas pendientes de revisión." });
-                }
-
                 return Ok(result);
             }
             catch (Exception ex)
@@ -62,17 +52,10 @@ namespace UserManagement.API.Controllers
             }
         }
 
-        // =================================================
-        // ENDPOINT: Aprobar (Activar) una empresa
-        // URL: PUT /api/Admin/approve-company/{id}
-        // =================================================
         [HttpPut("approve-company/{id}")]
         public async Task<IActionResult> ApproveCompany(string id)
         {
-            if (!await IsUserAdmin()) return Unauthorized("Acceso denegado. Se requieren permisos de Administrador.");
-
-            if (string.IsNullOrEmpty(id))
-                return BadRequest("El ID es obligatorio.");
+            if (!await IsUserAdmin()) return Unauthorized("Acceso denegado.");
 
             try
             {
@@ -85,5 +68,29 @@ namespace UserManagement.API.Controllers
             }
         }
 
+        [HttpGet("market/pending")]
+        public async Task<IActionResult> GetPendingMarket()
+        {
+            if (!await IsUserAdmin()) return Unauthorized("Acceso denegado.");
+
+            var result = await _adminService.GetPendingMarketUsersAsync();
+            return Ok(result);
+        }
+
+        [HttpPut("market/verify/{id}")]
+        public async Task<IActionResult> VerifyMarketUser(string id)
+        {
+            if (!await IsUserAdmin()) return Unauthorized("Acceso denegado.");
+
+            try
+            {
+                var msg = await _adminService.VerifyMarketUserAsync(id);
+                return Ok(new { message = msg });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }
