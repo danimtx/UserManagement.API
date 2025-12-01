@@ -4,35 +4,26 @@ using System.Text;
 
 namespace UserManagement.Domain.Enums
 {
-    // Define QUÉ es el usuario dentro del sistema
     public enum UserType
     {
-        // Cuenta personal: Acceso a Social, Wallet y Market (como comprador/vendedor)
-        Personal = 0,
+        // 1. NIVEL GLOBAL (Dueños del Software)
+        SuperAdminGlobal = 0, // El "Dios" del sistema (Tú). Nadie lo borra.
+        AdminSistema = 1,     // Soporte, Validadores de documentos, Editores de precios base.
 
-        // Cuenta empresarial principal: Dueño de los datos, paga los módulos, crea subcuentas
-        Empresa = 1,
+        // 2. NIVEL CLIENTES (Pagan o usan el servicio)
+        Empresa = 10,         // Dueño de la cuenta empresarial.
+        Personal = 11,        // Profesional independiente / Usuario normal.
 
-        // Cuentas creadas por la Empresa: Sus permisos dependen de lo que la empresa les asigne
-        SubCuenta = 2,
-
-        // Super Administrador: Gestiona validaciones de empresas y reseteos
-        AdminSistema = 3
+        // 3. NIVEL SUB-CUENTAS (Dependen de una Empresa)
+        SubCuentaEmpresa = 20 // Empleado creado por una Empresa.
     }
 
-    // Define si el usuario PUEDE ENTRAR o no al sistema
     public enum UserStatus
     {
-        // Estado inicial para EMPRESAS. No pueden entrar hasta que el Admin verifique sus documentos (NIT, SEPREC).
-        Pendiente = 0,
-
-        // Usuario validado (o personal recién creado). Puede iniciar sesión normalmente.
-        Activo = 1,
-
-        // Usuario bloqueado temporalmente (por falta de pago o comportamiento indebido).
-        Suspendido = 2,
-
-        // El Admin revisó los documentos de la empresa y los denegó (no son válidos).
-        Rechazado = 3
+        Pendiente = 0,   // Esperando validación (Empresas/Market)
+        Activo = 1,      // Puede entrar
+        Suspendido = 2,  // Bloqueo temporal (falta de pago, etc.)
+        Rechazado = 3,   // Documentos inválidos
+        Eliminado = 99   // Soft delete (papelera)
     }
 }
