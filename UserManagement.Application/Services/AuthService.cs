@@ -43,8 +43,7 @@ namespace UserManagement.Application.Services
                 );
 
                 var docsSoporte = new List<UploadedDocument>();
-                string fotoCiUrlEncontrada = string.Empty;
-                string fotoTituloUrlEncontrada = null;
+                string fotoPerfilEncontrada = string.Empty;
 
                 if (dto.Documentos != null)
                 {
@@ -60,11 +59,11 @@ namespace UserManagement.Application.Services
                         };
                         docsSoporte.Add(doc);
 
-                        if (d.Tipo.Contains("CI", StringComparison.OrdinalIgnoreCase))
-                            fotoCiUrlEncontrada = d.Url;
-
-                        if (d.Tipo.Contains("Titulo", StringComparison.OrdinalIgnoreCase))
-                            fotoTituloUrlEncontrada = d.Url;
+                        if (d.Tipo.Contains("Perfil", StringComparison.OrdinalIgnoreCase) ||
+                            d.Tipo.Contains("Avatar", StringComparison.OrdinalIgnoreCase))
+                        {
+                            fotoPerfilEncontrada = d.Url;
+                        }
                     }
                 }
 
@@ -72,7 +71,10 @@ namespace UserManagement.Application.Services
                 {
                     Id = createdUid,
                     Email = dto.Email,
+
                     UserName = dto.UserName,
+                    FotoPerfilUrl = fotoPerfilEncontrada,
+
                     TipoUsuario = UserType.Personal.ToString(),
                     Estado = UserStatus.Activo.ToString(),
                     FechaRegistro = DateTime.UtcNow,
@@ -85,16 +87,17 @@ namespace UserManagement.Application.Services
                         ApellidoMaterno = dto.ApellidoMaterno ?? string.Empty,
                         FechaNacimiento = dto.FechaNacimiento.ToUniversalTime(),
                         CI = dto.CI,
+                        Nit = dto.Nit,
+                        CodigoSeprec = dto.Seprec,
+
                         Pais = dto.Pais,
                         Departamento = dto.Departamento,
                         Direccion = dto.Direccion,
                         Celular = dto.Celular,
+
                         Profesion = dto.Profesion,
                         LinkedInUrl = dto.LinkedInUrl,
-                        Nit = dto.Nit,
-
-                        FotoCiUrl = fotoCiUrlEncontrada,
-                        FotoTituloUrl = fotoTituloUrlEncontrada,
+                        
 
                         VerificadoMarket = false,
                         DocumentosSoporte = docsSoporte
@@ -122,9 +125,12 @@ namespace UserManagement.Application.Services
 
             try
             {
+
                 createdUid = await _identityProvider.CreateUserAsync(dto.EmailEmpresa, dto.Password, dto.RazonSocial);
 
                 var docsLegales = new List<UploadedDocument>();
+                string logoEncontrado = string.Empty;
+
                 if (dto.DocumentosLegales != null)
                 {
                     foreach (var doc in dto.DocumentosLegales)
@@ -137,6 +143,11 @@ namespace UserManagement.Application.Services
                             EstadoValidacion = "Pendiente",
                             FechaSubida = DateTime.UtcNow
                         });
+
+                        if (doc.Tipo.Contains("Logo", StringComparison.OrdinalIgnoreCase))
+                        {
+                            logoEncontrado = doc.Url;
+                        }
                     }
                 }
 
@@ -174,6 +185,10 @@ namespace UserManagement.Application.Services
                 {
                     Id = createdUid,
                     Email = dto.EmailEmpresa,
+                    UserName = null,
+
+                    FotoPerfilUrl = logoEncontrado,
+
                     TipoUsuario = UserType.Empresa.ToString(),
                     Estado = UserStatus.Pendiente.ToString(),
                     FechaRegistro = DateTime.UtcNow,

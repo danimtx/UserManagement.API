@@ -16,6 +16,8 @@ namespace UserManagement.Application.DTOs.Auth
         public string UserName { get; set; } = string.Empty;
         public DateTime FechaNacimiento { get; set; }
         public string CI { get; set; } = string.Empty;
+        public string? Nit { get; set; }
+        public string? Seprec { get; set; }
 
         public string Pais { get; set; } = "Bolivia";
         public string Departamento { get; set; } = string.Empty;
@@ -24,7 +26,6 @@ namespace UserManagement.Application.DTOs.Auth
 
         public string Profesion { get; set; } = string.Empty;
         public string? LinkedInUrl { get; set; }
-        public string? Nit { get; set; }
         public List<DocumentoDto> Documentos { get; set; } = new();
     }
 }

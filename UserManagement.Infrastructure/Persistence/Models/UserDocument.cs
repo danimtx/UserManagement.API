@@ -10,6 +10,7 @@ namespace UserManagement.Infrastructure.Persistence.Models
     {
         [FirestoreProperty] public string Id { get; set; } = string.Empty;
         [FirestoreProperty] public string Email { get; set; } = string.Empty;
+        [FirestoreProperty] public string FotoPerfilUrl { get; set; } = string.Empty;
         [FirestoreProperty] public string? UserName { get; set; }
         [FirestoreProperty] public string TipoUsuario { get; set; } = string.Empty;
         [FirestoreProperty] public string Estado { get; set; } = string.Empty;
@@ -35,15 +36,14 @@ namespace UserManagement.Infrastructure.Persistence.Models
         [FirestoreProperty] public string ApellidoMaterno { get; set; } = string.Empty;
         [FirestoreProperty] public DateTime FechaNacimiento { get; set; }
         [FirestoreProperty] public string CI { get; set; } = string.Empty;
-        [FirestoreProperty] public string FotoCiUrl { get; set; } = string.Empty;
+        [FirestoreProperty] public string? Nit { get; set; }
+        [FirestoreProperty] public string? CodigoSeprec { get; set; }
         [FirestoreProperty] public string Pais { get; set; } = string.Empty;
         [FirestoreProperty] public string Departamento { get; set; } = string.Empty;
         [FirestoreProperty] public string Direccion { get; set; } = string.Empty;
         [FirestoreProperty] public string Celular { get; set; } = string.Empty;
         [FirestoreProperty] public string Profesion { get; set; } = string.Empty;
-        [FirestoreProperty] public string? FotoTituloUrl { get; set; }
         [FirestoreProperty] public string? LinkedInUrl { get; set; }
-        [FirestoreProperty] public string? Nit { get; set; }
         [FirestoreProperty] public bool VerificadoMarket { get; set; } = false;
         [FirestoreProperty] public Dictionary<string, string> DocumentosValidacion { get; set; } = new();
         [FirestoreProperty] public List<UploadedDocumentDocument> DocumentosSoporte { get; set; } = new();
