@@ -34,6 +34,7 @@ namespace UserManagement.Domain.Entities
 
         // --- ACCESO GLOBAL ---
         public List<string> ModulosHabilitados { get; set; } = new();
+        public List<ModuleRequest> SolicitudesModulos { get; set; } = new();
         public List<string> FuncionalidadesExtra { get; set; } = new();
         public List<string> IdsRecursosExternos { get; set; } = new();
         public List<string> IdsPerfilesSociales { get; set; } = new();

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using UserManagement.Application.DTOs.Admin;
 using UserManagement.Application.Interfaces.Repositories;
 using UserManagement.Application.Interfaces.Services;
 using UserManagement.Domain.Entities;
@@ -61,6 +62,22 @@ namespace UserManagement.API.Controllers
             {
                 var message = await _adminService.ApproveCompanyAsync(id);
                 return Ok(new { message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpPut("process-modules")]
+        public async Task<IActionResult> ProcessModules([FromBody] ApproveModuleDto dto)
+        {
+            if (!await IsUserAdmin()) return Unauthorized("Acceso denegado.");
+
+            try
+            {
+                var msg = await _adminService.ProcessModuleRequestsAsync(dto);
+                return Ok(new { message = msg });
             }
             catch (Exception ex)
             {

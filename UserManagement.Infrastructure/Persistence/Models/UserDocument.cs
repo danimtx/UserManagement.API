@@ -19,13 +19,18 @@ namespace UserManagement.Infrastructure.Persistence.Models
 
         [FirestoreProperty] public PersonalProfileDocument? DatosPersonales { get; set; }
         [FirestoreProperty] public CompanyProfileDocument? DatosEmpresa { get; set; }
+        [FirestoreProperty] public string? CuentaPadreId { get; set; }
+        [FirestoreProperty] public string? AreaTrabajo { get; set; }
+        [FirestoreProperty] public bool EsSuperAdminEmpresa { get; set; } = false;
 
         [FirestoreProperty] public SubAccountPermissionsDocument? PermisosEmpleado { get; set; }
         [FirestoreProperty] public SystemAdminPermissionsDocument? PermisosAdminSistema { get; set; }
 
         [FirestoreProperty] public List<string> ModulosHabilitados { get; set; } = new();
+        [FirestoreProperty] public List<ModuleRequestDocument> SolicitudesModulos { get; set; } = new();
         [FirestoreProperty] public List<string> FuncionalidadesExtra { get; set; } = new();
         [FirestoreProperty] public List<string> IdsRecursosExternos { get; set; } = new();
+        [FirestoreProperty] public List<string> IdsPerfilesSociales { get; set; } = new();
     }
 
     [FirestoreData]
@@ -45,7 +50,7 @@ namespace UserManagement.Infrastructure.Persistence.Models
         [FirestoreProperty] public string Profesion { get; set; } = string.Empty;
         [FirestoreProperty] public string? LinkedInUrl { get; set; }
         [FirestoreProperty] public bool VerificadoMarket { get; set; } = false;
-        [FirestoreProperty] public Dictionary<string, string> DocumentosValidacion { get; set; } = new();
+        //[FirestoreProperty] public Dictionary<string, string> DocumentosValidacion { get; set; } = new();
         [FirestoreProperty] public List<UploadedDocumentDocument> DocumentosSoporte { get; set; } = new();
     }
 
@@ -122,5 +127,14 @@ namespace UserManagement.Infrastructure.Persistence.Models
     {
         [FirestoreProperty] public string RolSistema { get; set; } = string.Empty;
         [FirestoreProperty] public List<string> PermisosGlobales { get; set; } = new();
+    }
+
+    [FirestoreData]
+    public class ModuleRequestDocument
+    {
+        [FirestoreProperty] public string NombreModulo { get; set; } = string.Empty;
+        [FirestoreProperty] public string Estado { get; set; } = "Pendiente";
+        [FirestoreProperty] public DateTime FechaSolicitud { get; set; }
+        [FirestoreProperty] public string? MotivoRechazo { get; set; }
     }
 }

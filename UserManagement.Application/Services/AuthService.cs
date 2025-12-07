@@ -181,6 +181,20 @@ namespace UserManagement.Application.Services
                     });
                 }
 
+                var solicitudes = new List<ModuleRequest>();
+                if (dto.ModulosSolicitados != null)
+                {
+                    foreach (var mod in dto.ModulosSolicitados)
+                    {
+                        solicitudes.Add(new ModuleRequest
+                        {
+                            NombreModulo = mod,
+                            Estado = "Pendiente",
+                            FechaSolicitud = DateTime.UtcNow
+                        });
+                    }
+                }
+
                 var newUser = new User
                 {
                     Id = createdUid,
@@ -191,8 +205,9 @@ namespace UserManagement.Application.Services
 
                     TipoUsuario = UserType.Empresa.ToString(),
                     Estado = UserStatus.Pendiente.ToString(),
+                    ModulosHabilitados = new List<string> (),
+                    SolicitudesModulos = solicitudes,
                     FechaRegistro = DateTime.UtcNow,
-                    ModulosHabilitados = dto.ModulosSolicitados,
 
                     DatosEmpresa = new CompanyProfile
                     {

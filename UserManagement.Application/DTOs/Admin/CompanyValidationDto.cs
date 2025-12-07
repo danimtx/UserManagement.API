@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using UserManagement.Domain.Entities.ValueObjects;
 
 namespace UserManagement.Application.DTOs.Admin
 {
@@ -11,8 +12,8 @@ namespace UserManagement.Application.DTOs.Admin
         public string RazonSocial { get; set; } = string.Empty;
         public string Nit { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
-
-        public Dictionary<string, string> DocumentosLegales { get; set; } = new();
+        public List<UploadedDocument> DocumentosLegales { get; set; } = new();
+        public List<ModuleRequest> SolicitudesModulos { get; set; } = new();
 
         public string NombreRepresentante { get; set; } = string.Empty;
         public DateTime FechaRegistro { get; set; }

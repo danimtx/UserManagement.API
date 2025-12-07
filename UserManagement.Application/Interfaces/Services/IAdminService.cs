@@ -10,6 +10,7 @@ namespace UserManagement.Application.Interfaces.Services
     {
         Task<List<CompanyValidationDto>> GetPendingCompaniesAsync();
         Task<string> ApproveCompanyAsync(string userId);
+        Task<string> ProcessModuleRequestsAsync(ApproveModuleDto dto);
         Task<List<MarketValidationDto>> GetPendingMarketUsersAsync();
         Task<string> VerifyMarketUserAsync(string userId);
     }
