@@ -4,6 +4,7 @@ using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 using UserManagement.Application.Interfaces.Repositories;
 using UserManagement.Application.Interfaces.Services;
 using UserManagement.Application.Services;
@@ -34,7 +35,7 @@ if (FirebaseApp.DefaultInstance == null)
 #pragma warning restore CS0618
 }
 
-string projectId = builder.Configuration["Firebase:ProjectId"];
+string projectId = builder.Configuration["Firebase:ProjectId"] ?? throw new InvalidOperationException("Firebase:ProjectId no configurado.");
 builder.Services.AddSingleton(FirestoreDb.Create(projectId));
 
 // Infraestructura
@@ -51,19 +52,24 @@ builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterPersonalValidator>();
 
-//EGURIDAD (JWT)
+//SEGURIDAD (JWT)
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = $"https://securetoken.google.com/{projectId}";
+        var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer no configurado.");
+        var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt:Audience no configurado.");
+        var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key no configurado.");
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = $"https://securetoken.google.com/{projectId}",
+            ValidIssuer = jwtIssuer,
             ValidateAudience = true,
-            ValidAudience = projectId,
-            ValidateLifetime = true
+            ValidAudience = jwtAudience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 

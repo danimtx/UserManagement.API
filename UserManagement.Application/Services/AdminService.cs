@@ -53,8 +53,6 @@ namespace UserManagement.Application.Services
             if (user == null) throw new Exception("Empresa no encontrada.");
 
             var modulosBase = new List<string> { "Social", "Wallet", "Market", "Trabajo", "Herramientas" };
-            bool seAproboAlgunoNuevo = false;
-
             foreach (var decision in dto.Decisiones)
             {
                 var solicitud = user.SolicitudesModulos
@@ -69,7 +67,6 @@ namespace UserManagement.Application.Services
                         if (!user.ModulosHabilitados.Contains(decision.NombreModulo))
                         {
                             user.ModulosHabilitados.Add(decision.NombreModulo);
-                            seAproboAlgunoNuevo = true;
                         }
                     }
                     else

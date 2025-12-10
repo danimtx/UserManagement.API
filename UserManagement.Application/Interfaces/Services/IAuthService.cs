@@ -10,6 +10,7 @@ namespace UserManagement.Application.Interfaces.Services
     {
         Task<string> RegisterPersonalAsync(RegisterPersonalDto dto);
         Task<string> RegisterCompanyAsync(RegisterCompanyDto dto);
-        Task<string> LoginAsync(LoginDto loginDto);
+        Task<AuthResponseDto> LoginAsync(LoginDto loginDto);
+        Task<AuthResponseDto> RefreshTokenAsync(string refreshToken);
     }
 }

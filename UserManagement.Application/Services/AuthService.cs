@@ -1,5 +1,9 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using UserManagement.Application.DTOs.Auth;
 using UserManagement.Application.Interfaces.Repositories;
@@ -14,11 +18,13 @@ namespace UserManagement.Application.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IIdentityProvider _identityProvider;
+        private readonly IConfiguration _configuration;
 
-        public AuthService(IUserRepository userRepository, IIdentityProvider identityProvider)
+        public AuthService(IUserRepository userRepository, IIdentityProvider identityProvider, IConfiguration configuration)
         {
             _userRepository = userRepository;
             _identityProvider = identityProvider;
+            _configuration = configuration;
         }
 
         public async Task<string> RegisterPersonalAsync(RegisterPersonalDto dto)
@@ -97,7 +103,7 @@ namespace UserManagement.Application.Services
 
                         Profesion = dto.Profesion,
                         LinkedInUrl = dto.LinkedInUrl,
-                        
+
 
                         VerificadoMarket = false,
                         DocumentosSoporte = docsSoporte
@@ -205,7 +211,7 @@ namespace UserManagement.Application.Services
 
                     TipoUsuario = UserType.Empresa.ToString(),
                     Estado = UserStatus.Pendiente.ToString(),
-                    ModulosHabilitados = new List<string> (),
+                    ModulosHabilitados = new List<string>(),
                     SolicitudesModulos = solicitudes,
                     FechaRegistro = DateTime.UtcNow,
 
@@ -248,9 +254,9 @@ namespace UserManagement.Application.Services
             }
         }
 
-        public async Task<string> LoginAsync(LoginDto loginDto)
+        public async Task<AuthResponseDto> LoginAsync(LoginDto loginDto)
         {
-            var (token, uid) = await _identityProvider.SignInAsync(loginDto.Email, loginDto.Password);
+            var (firebaseToken, uid, refreshToken) = await _identityProvider.SignInAsync(loginDto.Email, loginDto.Password);
             var user = await _userRepository.GetByIdAsync(uid);
 
             if (user == null)
@@ -278,8 +284,78 @@ namespace UserManagement.Application.Services
                     throw new UnauthorizedAccessException($"No tienes permiso para acceder al módulo: {loginDto.ModuloSeleccionado}.");
                 }
             }
+            
+            var customToken = GenerateJwtToken(user);
 
-            return token;
+            return new AuthResponseDto
+            {
+                Token = customToken,
+                RefreshToken = refreshToken,
+                UserId = uid
+            };
+        }
+
+        public async Task<AuthResponseDto> RefreshTokenAsync(string incomingRefreshToken)
+        {
+            var (newFirebaseToken, newRefreshToken) = await _identityProvider.RefreshTokenAsync(incomingRefreshToken);
+            
+            var userId = DecodeFirebaseToken(newFirebaseToken);
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException("El usuario asociado al token de refresco ya no existe.");
+            }
+
+            var newCustomToken = GenerateJwtToken(user);
+
+            return new AuthResponseDto
+            {
+                Token = newCustomToken,
+                RefreshToken = newRefreshToken,
+                UserId = userId
+            };
+        }
+
+        private string DecodeFirebaseToken(string firebaseToken)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var decodedToken = handler.ReadJwtToken(firebaseToken);
+            var userIdClaim = decodedToken.Claims.FirstOrDefault(c => c.Type == "user_id");
+            if (userIdClaim == null)
+            {
+                throw new InvalidOperationException("El token de Firebase no contiene el user_id.");
+            }
+            return userIdClaim.Value;
+        }
+
+        private string GenerateJwtToken(User user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.TipoUsuario)
+            };
+
+            var jwtKey = _configuration["Jwt:Key"];
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new InvalidOperationException("JWT Secret Key is not configured.");
+            }
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expires = DateTime.UtcNow.AddMinutes(60); // Access token expires in 60 minutes
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
+                claims: claims,
+                expires: expires,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

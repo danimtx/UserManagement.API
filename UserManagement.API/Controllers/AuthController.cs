@@ -52,22 +52,78 @@ namespace UserManagement.API.Controllers
             }
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
-        {
-            try
-            {
-                string token = await _authService.LoginAsync(dto);
-                return Ok(new { token });
+                [HttpPost("login")]
+
+                public async Task<IActionResult> Login([FromBody] LoginDto dto)
+
+                {
+
+                    try
+
+                    {
+
+                        var result = await _authService.LoginAsync(dto);
+
+                        return Ok(result);
+
+                    }
+
+                    catch (UnauthorizedAccessException ex)
+
+                    {
+
+                        return Unauthorized(new { error = ex.Message });
+
+                    }
+
+                    catch (Exception ex)
+
+                    {
+
+                        return BadRequest(new { error = ex.Message });
+
+                    }
+
+                }
+
+        
+
+                [HttpPost("refresh-token")]
+
+                public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto dto)
+
+                {
+
+                    try
+
+                    {
+
+                        var result = await _authService.RefreshTokenAsync(dto.RefreshToken);
+
+                        return Ok(result);
+
+                    }
+
+                    catch (UnauthorizedAccessException)
+
+                    {
+
+                        return Unauthorized(new { error = "Sesión expirada. Inicie sesión nuevamente." });
+
+                    }
+
+                    catch (Exception ex)
+
+                    {
+
+                        return BadRequest(new { error = ex.Message });
+
+                    }
+
+                }
+
             }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+
         }
-    }
-}
+
+        

@@ -8,6 +8,7 @@ namespace UserManagement.Application.Interfaces.Services
     {
         Task<string> CreateUserAsync(string email, string password, string displayName);
         Task DeleteUserAsync(string uid);
-        Task<(string Token, string Uid)> SignInAsync(string email, string password);
+        Task<(string Token, string Uid, string RefreshToken)> SignInAsync(string email, string password);
+        Task<(string NewToken, string NewRefreshToken)> RefreshTokenAsync(string refreshToken);
     }
 }

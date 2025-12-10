@@ -40,7 +40,7 @@ namespace UserManagement.Infrastructure.Services
             await _firebaseAuth.DeleteUserAsync(uid);
         }
 
-        public async Task<(string Token, string Uid)> SignInAsync(string email, string password)
+        public async Task<(string Token, string Uid, string RefreshToken)> SignInAsync(string email, string password)
         {
             var authUrl = $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={_webApiKey}";
 
@@ -63,13 +63,34 @@ namespace UserManagement.Infrastructure.Services
 
             if (result == null) throw new Exception("Respuesta vacía de Firebase.");
 
-            return (result.idToken, result.localId);
+            return (result.idToken, result.localId, result.refreshToken);
+        }
+
+        public async Task<(string NewToken, string NewRefreshToken)> RefreshTokenAsync(string refreshToken)
+        {
+            var authUrl = $"https://securetoken.googleapis.com/v1/token?key={_webApiKey}";
+            var payload = new { grant_type = "refresh_token", refresh_token = refreshToken };
+
+            var response = await _httpClient.PostAsJsonAsync(authUrl, payload);
+            if (!response.IsSuccessStatusCode) throw new UnauthorizedAccessException("Refresh Token inválido.");
+
+            var result = await response.Content.ReadFromJsonAsync<FirebaseRefreshTokenResponse>();
+            if (result == null) throw new Exception("Respuesta vacía de Firebase al refrescar el token.");
+            return (result.id_token, result.refresh_token);
         }
 
         private class FirebaseSignInResponse
         {
             public string idToken { get; set; } = string.Empty;
             public string localId { get; set; } = string.Empty;
+            public string refreshToken { get; set; } = string.Empty;
+            public string expiresIn { get; set; } = string.Empty;
+        }
+
+        private class FirebaseRefreshTokenResponse
+        {
+            public string id_token { get; set; } = string.Empty;
+            public string refresh_token { get; set; } = string.Empty;
         }
     }
 }
