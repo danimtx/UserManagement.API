@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Collections.Generic;
+using UserManagement.Application.DTOs.Shared;
 
 namespace UserManagement.Application.DTOs.Auth
 {
@@ -39,13 +39,6 @@ namespace UserManagement.Application.DTOs.Auth
         public double Longitud { get; set; }
         public string? Telefono { get; set; }
         public List<string> ModulosAsociados { get; set; } = new();
-    }
-
-    public class DocumentoDto
-    {
-        public string Tipo { get; set; } = string.Empty;
-        public string Url { get; set; } = string.Empty;
-        public string Modulo { get; set; } = "General";
     }
 
     public class RepresentativeDto

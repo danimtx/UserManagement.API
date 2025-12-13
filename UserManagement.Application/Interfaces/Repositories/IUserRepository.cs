@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using UserManagement.Domain.Entities;
 
 namespace UserManagement.Application.Interfaces.Repositories
@@ -11,8 +12,15 @@ namespace UserManagement.Application.Interfaces.Repositories
         Task<User?> GetByEmailAsync(string email);
         Task AddAsync(User user);
         Task UpdateAsync(User user);
-        Task<List<User>> GetPendingCompaniesAsync();
-        Task<List<User>> GetActivePersonalUsersAsync();
         Task<User?> GetByUserNameAsync(string username);
+        
+        // --- Métodos para Admin ---
+        Task<List<User>> GetPendingCompaniesAsync();
+        Task<List<User>> GetCompaniesWithPendingModulesAsync();
+        Task<List<User>> GetUsersWithPendingTagsAsync();
+
+        // --- Métodos para Reviews ---
+        Task AddReviewAsync(Review review);
+        Task<bool> HasUserReviewedContextAsync(string authorId, string recipientId, string contextId);
     }
 }

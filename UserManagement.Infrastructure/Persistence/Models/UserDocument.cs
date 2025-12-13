@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UserManagement.Infrastructure.Persistence.Models;
 
 namespace UserManagement.Infrastructure.Persistence.Models
 {
@@ -50,8 +51,13 @@ namespace UserManagement.Infrastructure.Persistence.Models
         [FirestoreProperty] public string Profesion { get; set; } = string.Empty;
         [FirestoreProperty] public string? LinkedInUrl { get; set; }
         [FirestoreProperty] public bool VerificadoMarket { get; set; } = false;
-        //[FirestoreProperty] public Dictionary<string, string> DocumentosValidacion { get; set; } = new();
         [FirestoreProperty] public List<UploadedDocumentDocument> DocumentosSoporte { get; set; } = new();
+
+        // --- Nuevos Campos ---
+        [FirestoreProperty] public string? Biografia { get; set; }
+        [FirestoreProperty] public GeoLocationDocument? UbicacionLaboral { get; set; }
+        [FirestoreProperty] public bool DireccionVisible { get; set; } = false;
+        [FirestoreProperty] public List<TagDocument> Tags { get; set; } = new();
     }
 
     [FirestoreData]
@@ -66,6 +72,7 @@ namespace UserManagement.Infrastructure.Persistence.Models
         [FirestoreProperty] public List<CompanyBranchDocument> Sucursales { get; set; } = new();
         [FirestoreProperty] public List<UploadedDocumentDocument> DocumentosLegales { get; set; } = new();
         [FirestoreProperty] public List<string> AreasDefinidas { get; set; } = new();
+        [FirestoreProperty] public List<PerfilComercialDocument> PerfilesComerciales { get; set; } = new();
     }
 
     [FirestoreData]

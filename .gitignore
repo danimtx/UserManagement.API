@@ -5,7 +5,7 @@ firebase_credentials.json
 !appsettings.json
 !appsettings.Development.json
 
-# Ignorar carpetas de compilación
+# Ignorar carpetas de compilaci n
 bin/
 obj/
 .vs/
@@ -15,3 +15,8 @@ obj/
 *.user
 *.suo
 
+#mds
+instruccion.md
+GEMINI.md
+logs.md
+logs

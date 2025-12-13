@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Admin;
 using UserManagement.Application.Interfaces.Repositories;
 using UserManagement.Application.Interfaces.Services;
-using UserManagement.Domain.Entities.ValueObjects;
+using UserManagement.Domain.Entities;
 using UserManagement.Domain.Enums;
 
 namespace UserManagement.Application.Services
@@ -18,118 +19,152 @@ namespace UserManagement.Application.Services
             _userRepository = userRepository;
         }
 
-        public async Task<List<CompanyValidationDto>> GetPendingCompaniesAsync()
+        // --- Bandeja 1: Identidades ---
+        public async Task<List<PendingIdentityDto>> GetPendingIdentitiesAsync()
         {
             var users = await _userRepository.GetPendingCompaniesAsync();
-
-            return users.Select(u => new CompanyValidationDto
+            return users.Select(u => new PendingIdentityDto
             {
-                Id = u.Id,
-                Email = u.Email,
-                RazonSocial = u.DatosEmpresa?.RazonSocial ?? "Sin Nombre",
-                Nit = u.DatosEmpresa?.Nit ?? "S/N",
-                Estado = u.Estado,
-                FechaRegistro = u.FechaRegistro,
-                NombreRepresentante = $"{u.DatosEmpresa?.Representante?.Nombres} {u.DatosEmpresa?.Representante?.ApellidoPaterno}",
-                DocumentosLegales = u.DatosEmpresa?.DocumentosLegales ?? new List<UploadedDocument>(),
-                SolicitudesModulos = u.SolicitudesModulos ?? new List<ModuleRequest>()
+                UserId = u.Id,
+                RazonSocial = u.DatosEmpresa?.RazonSocial ?? "N/A",
+                Nit = u.DatosEmpresa?.Nit ?? "N/A",
+                FechaRegistro = u.FechaRegistro
             }).ToList();
         }
 
-        public async Task<string> ApproveCompanyAsync(string userId)
+        public async Task DecideOnIdentityAsync(IdentityDecisionDto dto)
         {
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null) throw new Exception("La empresa no existe.");
+            var user = await _userRepository.GetByIdAsync(dto.UserId);
+            if (user == null || user.TipoUsuario != UserType.Empresa.ToString()) throw new Exception("Usuario de empresa no encontrado o inválido.");
 
-            user.Estado = UserStatus.Activo.ToString();
+            user.Estado = dto.Approve ? UserStatus.Activo.ToString() : UserStatus.Rechazado.ToString();
+            // En un caso real, aquí se podría guardar el dto.RejectionReason en algún log o campo.
+            
             await _userRepository.UpdateAsync(user);
-
-            return "Empresa aprobada exitosamente.";
         }
 
-        public async Task<string> ProcessModuleRequestsAsync(ApproveModuleDto dto)
+        // --- Bandeja 2: Módulos Técnicos ---
+        public async Task<List<PendingModuleDto>> GetPendingModulesAsync()
         {
-            var user = await _userRepository.GetByIdAsync(dto.CompanyId);
-            if (user == null) throw new Exception("Empresa no encontrada.");
+            var companies = await _userRepository.GetCompaniesWithPendingModulesAsync();
+            var pendingModules = new List<PendingModuleDto>();
 
-            var modulosBase = new List<string> { "Social", "Wallet", "Market", "Trabajo", "Herramientas" };
-            foreach (var decision in dto.Decisiones)
+            foreach (var company in companies)
             {
-                var solicitud = user.SolicitudesModulos
-                    .FirstOrDefault(s => s.NombreModulo == decision.NombreModulo && s.Estado == "Pendiente");
+                if (company.DatosEmpresa == null) continue;
 
-                if (solicitud != null)
+                var profiles = company.DatosEmpresa.PerfilesComerciales
+                    .Where(p => p.Tipo == CommercialProfileType.Modulo && p.Estado == CommercialProfileStatus.Pendiente);
+
+                foreach (var profile in profiles)
                 {
-                    if (decision.Aprobar)
+                    pendingModules.Add(new PendingModuleDto
                     {
-                        solicitud.Estado = "Aprobado";
-
-                        if (!user.ModulosHabilitados.Contains(decision.NombreModulo))
-                        {
-                            user.ModulosHabilitados.Add(decision.NombreModulo);
-                        }
-                    }
-                    else
-                    {
-                        solicitud.Estado = "Rechazado";
-                        solicitud.MotivoRechazo = decision.MotivoRechazo ?? "Sin motivo especificado";
-                    }
-                }
-            }
-
-            if (user.ModulosHabilitados.Count > 0)
-            {
-                user.Estado = UserStatus.Activo.ToString();
-                foreach (var basico in modulosBase)
-                {
-                    if (!user.ModulosHabilitados.Contains(basico))
-                    {
-                        user.ModulosHabilitados.Add(basico);
-                    }
-                }
-            }
-
-            await _userRepository.UpdateAsync(user);
-            return "Solicitudes procesadas correctamente.";
-        }
-
-        public async Task<List<MarketValidationDto>> GetPendingMarketUsersAsync()
-        {
-            var users = await _userRepository.GetActivePersonalUsersAsync();
-            var pending = new List<MarketValidationDto>();
-
-            foreach (var user in users)
-            {
-                if (user.DatosPersonales == null) continue;
-
-                if (!user.DatosPersonales.VerificadoMarket &&
-                    user.DatosPersonales.DocumentosSoporte.Count > 0)
-                {
-                    pending.Add(new MarketValidationDto
-                    {
-                        Id = user.Id,
-                        Nombres = user.DatosPersonales.Nombres,
-                        Apellidos = $"{user.DatosPersonales.ApellidoPaterno} {user.DatosPersonales.ApellidoMaterno}",
-                        CI = user.DatosPersonales.CI,
-                        Profesion = user.DatosPersonales.Profesion,
-                        DocumentosEvidencia = user.DatosPersonales.DocumentosSoporte
+                        CompanyUserId = company.Id,
+                        CompanyName = company.DatosEmpresa.RazonSocial,
+                        CommercialProfileId = profile.Id,
+                        ProfileName = profile.NombreComercial,
+                        ModuleName = profile.ModuloAsociado ?? "N/A",
+                        RequestDate = profile.DocumentosEspecificos.FirstOrDefault()?.FechaSubida ?? DateTime.MinValue
                     });
                 }
             }
-            return pending;
+            return pendingModules;
         }
 
-        public async Task<string> VerifyMarketUserAsync(string userId)
+        public async Task DecideOnModuleAsync(ModuleDecisionDto dto)
         {
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null) throw new Exception("Usuario no encontrado.");
+            var user = await _userRepository.GetByIdAsync(dto.CompanyUserId);
+            if (user == null || user.DatosEmpresa == null) throw new Exception("Usuario de empresa no encontrado.");
 
-            if (user.DatosPersonales == null) throw new Exception("El usuario no tiene perfil personal.");
-            user.DatosPersonales.VerificadoMarket = true;
+            var profile = user.DatosEmpresa.PerfilesComerciales.FirstOrDefault(p => p.Id == dto.CommercialProfileId);
+            if (profile == null) throw new Exception("Perfil comercial no encontrado.");
+
+            profile.Estado = dto.Approve ? CommercialProfileStatus.Activo : CommercialProfileStatus.Rechazado;
+            // Aquí también se podría guardar el dto.RejectionReason en el perfil.
+
+            if (dto.Approve && !string.IsNullOrEmpty(profile.ModuloAsociado))
+            {
+                if (!user.ModulosHabilitados.Contains(profile.ModuloAsociado))
+                {
+                    user.ModulosHabilitados.Add(profile.ModuloAsociado);
+                }
+            }
 
             await _userRepository.UpdateAsync(user);
+        }
 
-            return "Usuario verificado para Market exitosamente.";
+        // --- Bandeja 3: Tags y Reputación ---
+        public async Task<List<PendingTagDto>> GetPendingTagsAsync()
+        {
+            var users = await _userRepository.GetUsersWithPendingTagsAsync();
+            var pendingTags = new List<PendingTagDto>();
+
+            foreach (var user in users)
+            {
+                // Solicitudes de Tags de Empresas
+                if (user.TipoUsuario == UserType.Empresa.ToString() && user.DatosEmpresa != null)
+                {
+                    var profiles = user.DatosEmpresa.PerfilesComerciales
+                        .Where(p => p.Tipo == CommercialProfileType.TagSocial && p.Estado == CommercialProfileStatus.Pendiente);
+                    
+                    foreach(var profile in profiles)
+                    {
+                         pendingTags.Add(new PendingTagDto
+                         {
+                            RequestType = "Empresa",
+                            UserId = user.Id,
+                            UserName = user.DatosEmpresa.RazonSocial,
+                            TagOrProfileId = profile.Id,
+                            TagOrProfileName = profile.NombreComercial,
+                            RequestDate = profile.DocumentosEspecificos.FirstOrDefault()?.FechaSubida ?? DateTime.MinValue
+                         });
+                    }
+                }
+                // Solicitudes de Tags de Personas
+                else if (user.TipoUsuario == UserType.Personal.ToString() && user.DatosPersonales != null)
+                {
+                    var tags = user.DatosPersonales.Tags.Where(t => t.Estado == TagStatus.Pendiente);
+
+                    foreach(var tag in tags)
+                    {
+                        pendingTags.Add(new PendingTagDto
+                        {
+                            RequestType = "Personal",
+                            UserId = user.Id,
+                            UserName = $"{user.DatosPersonales.Nombres} {user.DatosPersonales.ApellidoPaterno}",
+                            TagOrProfileId = tag.Nombre, // Para persona, el ID es el nombre del tag
+                            TagOrProfileName = tag.Nombre,
+                            RequestDate = tag.Evidencias.FirstOrDefault()?.FechaSubida ?? DateTime.MinValue
+                        });
+                    }
+                }
+            }
+            return pendingTags;
+        }
+
+        public async Task DecideOnCompanyTagAsync(CompanyTagDecisionDto dto)
+        {
+             var user = await _userRepository.GetByIdAsync(dto.CompanyUserId);
+            if (user == null || user.DatosEmpresa == null) throw new Exception("Usuario de empresa no encontrado.");
+
+            var profile = user.DatosEmpresa.PerfilesComerciales.FirstOrDefault(p => p.Id == dto.CommercialProfileId);
+            if (profile == null) throw new Exception("Perfil comercial no encontrado.");
+
+            profile.Estado = dto.Approve ? CommercialProfileStatus.Activo : CommercialProfileStatus.Rechazado;
+            await _userRepository.UpdateAsync(user);
+        }
+
+        public async Task DecideOnPersonalTagAsync(PersonalTagDecisionDto dto)
+        {
+            var user = await _userRepository.GetByIdAsync(dto.PersonalUserId);
+            if (user == null || user.DatosPersonales == null) throw new Exception("Usuario personal no encontrado.");
+
+            var tag = user.DatosPersonales.Tags.FirstOrDefault(t => t.Nombre.Equals(dto.TagName, StringComparison.OrdinalIgnoreCase));
+            if (tag == null) throw new Exception("Tag no encontrado en el perfil.");
+
+            tag.Estado = dto.Approve ? TagStatus.Activo : TagStatus.Rechazado;
+            await _userRepository.UpdateAsync(user);
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Company;
 using UserManagement.Application.Interfaces.Repositories;
 using UserManagement.Application.Interfaces.Services;
@@ -103,6 +105,63 @@ namespace UserManagement.Application.Services
                 empresa.DatosEmpresa.AreasDefinidas.Add(newAreaName);
                 await _userRepository.UpdateAsync(empresa);
             }
+        }
+
+        public async Task RequestCommercialProfileAsync(string companyId, RequestCommercialProfileDto dto)
+        {
+            var user = await _userRepository.GetByIdAsync(companyId);
+            if (user == null) throw new Exception("Usuario de empresa no encontrado.");
+            if (user.TipoUsuario != UserType.Empresa.ToString() || user.DatosEmpresa == null) throw new Exception("Esta acción solo es válida para perfiles de empresa.");
+
+            var newProfile = new PerfilComercial
+            {
+                NombreComercial = dto.NombreComercial,
+                ModuloAsociado = dto.ModuloAsociado,
+                LogoUrl = dto.LogoUrl,
+                Tipo = string.IsNullOrEmpty(dto.ModuloAsociado) ? CommercialProfileType.TagSocial : CommercialProfileType.Modulo,
+                Estado = CommercialProfileStatus.Pendiente,
+                DocumentosEspecificos = dto.Documentos.Select(d => new UploadedDocument
+                {
+                    TipoDocumento = d.Tipo,
+                    UrlArchivo = d.Url,
+                    FechaSubida = DateTime.UtcNow
+                }).ToList()
+            };
+            
+            user.DatosEmpresa.PerfilesComerciales.Add(newProfile);
+            await _userRepository.UpdateAsync(user);
+        }
+
+        public async Task RectifyIdentityAsync(string companyId, RectifyIdentityDto dto)
+        {
+            var user = await _userRepository.GetByIdAsync(companyId);
+            if (user == null) throw new Exception("Usuario de empresa no encontrado.");
+            if (user.TipoUsuario != UserType.Empresa.ToString() || user.DatosEmpresa == null) throw new Exception("Esta acción solo es válida para perfiles de empresa.");
+
+            if (user.Estado != UserStatus.Rechazado.ToString())
+            {
+                throw new Exception("Solo se puede rectificar una identidad que ha sido rechazada.");
+            }
+
+            // Actualizar datos
+            user.DatosEmpresa.RazonSocial = dto.RazonSocial;
+            user.DatosEmpresa.Nit = dto.Nit;
+
+            // Si se envían nuevos documentos, reemplazarlos
+            if (dto.DocumentosLegales.Any())
+            {
+                user.DatosEmpresa.DocumentosLegales = dto.DocumentosLegales.Select(d => new UploadedDocument
+                {
+                    TipoDocumento = d.Tipo,
+                    UrlArchivo = d.Url,
+                    FechaSubida = DateTime.UtcNow
+                }).ToList();
+            }
+            
+            // Cambiar estado para que vuelva a la bandeja de pendientes del admin
+            user.Estado = UserStatus.Pendiente.ToString();
+
+            await _userRepository.UpdateAsync(user);
         }
     }
 }

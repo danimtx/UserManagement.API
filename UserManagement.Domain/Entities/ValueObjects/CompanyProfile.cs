@@ -21,6 +21,9 @@ namespace UserManagement.Domain.Entities.ValueObjects
         public List<UploadedDocument> DocumentosLegales { get; set; } = new();
 
         public List<string> AreasDefinidas { get; set; } = new List<string>() { "General" };
+
+        // --- MULTI-CARA COMERCIAL ---
+        public List<PerfilComercial> PerfilesComerciales { get; set; } = new();
     }
 
     public class LegalRepresentative

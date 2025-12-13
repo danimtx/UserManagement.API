@@ -4,6 +4,12 @@ using System.Text;
 
 namespace UserManagement.Domain.Entities.ValueObjects
 {
+    public class GeoLocation
+    {
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+    }
+
     public class PersonalProfile
     {
         public string Nombres { get; set; } = string.Empty;
@@ -21,5 +27,11 @@ namespace UserManagement.Domain.Entities.ValueObjects
         public string? LinkedInUrl { get; set; }
         public bool VerificadoMarket { get; set; } = false;
         public List<UploadedDocument> DocumentosSoporte { get; set; } = new();
+
+        // --- Nuevos Campos de Reputación y Visibilidad ---
+        public string? Biografia { get; set; }
+        public GeoLocation? UbicacionLaboral { get; set; }
+        public bool DireccionVisible { get; set; } = false;
+        public List<Tag> Tags { get; set; } = new List<Tag>();
     }
 }

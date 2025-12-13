@@ -26,4 +26,23 @@ namespace UserManagement.Domain.Enums
         Rechazado = 3,   // Documentos inválidos
         Eliminado = 99   // Soft delete (papelera)
     }
+
+    public enum TagStatus
+    {
+        Pendiente = 0,
+        Activo = 1,
+        Rechazado = 3
+    }
+
+    public enum CommercialProfileStatus
+    {
+        Pendiente = 0,
+        Activo = 1,
+        Rechazado = 3
+    }
+    public enum CommercialProfileType
+    {
+        Modulo = 0,
+        TagSocial = 1
+    }
 }
