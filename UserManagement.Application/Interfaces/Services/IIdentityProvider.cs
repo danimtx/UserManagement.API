@@ -10,5 +10,7 @@ namespace UserManagement.Application.Interfaces.Services
         Task DeleteUserAsync(string uid);
         Task<(string Token, string Uid, string RefreshToken)> SignInAsync(string email, string password);
         Task<(string NewToken, string NewRefreshToken)> RefreshTokenAsync(string refreshToken);
+        Task UpdatePasswordAsync(string uid, string newPassword);
+        Task AdminResetPasswordAsync(string uid, string newPassword);
     }
 }

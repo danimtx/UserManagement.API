@@ -5,12 +5,13 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Review;
 using UserManagement.Application.Interfaces.Services;
+using System.Collections.Generic; // Added for List<ReviewDetailDto>
 
 namespace UserManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize] // Class-level authorization, new public methods need [AllowAnonymous]
     public class ReviewsController : ControllerBase
     {
         private readonly IReviewService _reviewService;
@@ -35,6 +36,25 @@ namespace UserManagement.API.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpGet] // Route: /api/Reviews
+        public async Task<IActionResult> GetReviews([FromQuery] string recipientId, [FromQuery] string contextId)
+        {
+            try
+            {
+                var reviews = await _reviewService.GetReviewsAsync(recipientId, contextId);
+                return Ok(reviews);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
             }
         }
     }

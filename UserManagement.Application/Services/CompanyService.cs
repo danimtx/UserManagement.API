@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Company;
+using UserManagement.Application.DTOs.Company.Employees;
+using UserManagement.Application.DTOs.Public;
 using UserManagement.Application.Interfaces.Repositories;
 using UserManagement.Application.Interfaces.Services;
 using UserManagement.Domain.Entities;
@@ -102,6 +103,10 @@ namespace UserManagement.Application.Services
 
             if (empresa.DatosEmpresa != null)
             {
+                if (empresa.DatosEmpresa.AreasDefinidas == null)
+                {
+                    empresa.DatosEmpresa.AreasDefinidas = new List<string>();
+                }
                 empresa.DatosEmpresa.AreasDefinidas.Add(newAreaName);
                 await _userRepository.UpdateAsync(empresa);
             }
@@ -143,11 +148,9 @@ namespace UserManagement.Application.Services
                 throw new Exception("Solo se puede rectificar una identidad que ha sido rechazada.");
             }
 
-            // Actualizar datos
             user.DatosEmpresa.RazonSocial = dto.RazonSocial;
             user.DatosEmpresa.Nit = dto.Nit;
 
-            // Si se envían nuevos documentos, reemplazarlos
             if (dto.DocumentosLegales.Any())
             {
                 user.DatosEmpresa.DocumentosLegales = dto.DocumentosLegales.Select(d => new UploadedDocument
@@ -158,10 +161,159 @@ namespace UserManagement.Application.Services
                 }).ToList();
             }
             
-            // Cambiar estado para que vuelva a la bandeja de pendientes del admin
             user.Estado = UserStatus.Pendiente.ToString();
 
             await _userRepository.UpdateAsync(user);
+        }
+
+        private async Task<User> ValidateEmployeeOwnership(string companyId, string employeeId)
+        {
+            var employee = await _userRepository.GetByIdAsync(employeeId);
+            if (employee == null)
+            {
+                throw new KeyNotFoundException("Empleado no encontrado.");
+            }
+            if (employee.CreadoPorId != companyId)
+            {
+                throw new UnauthorizedAccessException("Este empleado no pertenece a su empresa.");
+            }
+            return employee;
+        }
+
+        public async Task<List<EmployeeSummaryDto>> GetEmployeesAsync(string companyId)
+        {
+            var employees = await _userRepository.GetEmployeesByCompanyAsync(companyId);
+            return employees.Select(e => new EmployeeSummaryDto
+            {
+                Id = e.Id,
+                NombreCompleto = $"{e.DatosPersonales?.Nombres} {e.DatosPersonales?.ApellidoPaterno}".Trim(),
+                Email = e.Email,
+                Cargo = e.AreaTrabajo,
+                EsSuperAdmin = e.EsSuperAdminEmpresa,
+                Estado = e.Estado,
+                FechaRegistro = e.FechaRegistro
+            }).ToList();
+        }
+
+        public async Task<EmployeeDetailDto> GetEmployeeDetailAsync(string companyId, string employeeId)
+        {
+            var employee = await ValidateEmployeeOwnership(companyId, employeeId);
+            
+            var permissions = new Dictionary<string, ModuleAccessDto>();
+            if (employee.PermisosEmpleado?.Modulos != null)
+            {
+                permissions = employee.PermisosEmpleado.Modulos.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new ModuleAccessDto
+                    {
+                        Acceso = kvp.Value.TieneAcceso,
+                        Funcionalidades = kvp.Value.FuncionalidadesPermitidas,
+                        RecursosIds = kvp.Value.RecursosEspecificosAllowed
+                    });
+            }
+
+            return new EmployeeDetailDto
+            {
+                Id = employee.Id,
+                NombreCompleto = $"{employee.DatosPersonales?.Nombres} {employee.DatosPersonales?.ApellidoPaterno}".Trim(),
+                Email = employee.Email,
+                Cargo = employee.AreaTrabajo,
+                EsSuperAdmin = employee.EsSuperAdminEmpresa,
+                Estado = employee.Estado,
+                FechaRegistro = employee.FechaRegistro,
+                CI = employee.DatosPersonales?.CI,
+                Celular = employee.DatosPersonales?.Celular,
+                Direccion = employee.DatosPersonales?.Direccion,
+                Permisos = permissions
+            };
+        }
+
+        public async Task UpdateEmployeePermissionsAsync(string companyId, string employeeId, UpdateEmployeePermissionsDto dto)
+        {
+            var employee = await ValidateEmployeeOwnership(companyId, employeeId);
+
+            if (dto.AreaTrabajo != null)
+            {
+                employee.AreaTrabajo = dto.AreaTrabajo;
+            }
+            if (dto.EsSuperAdmin.HasValue)
+            {
+                employee.EsSuperAdminEmpresa = dto.EsSuperAdmin.Value;
+            }
+            if (dto.Permisos != null)
+            {
+                if(employee.PermisosEmpleado == null) employee.PermisosEmpleado = new SubAccountPermissions();
+                
+                employee.PermisosEmpleado.Modulos = dto.Permisos.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new ModuleAccess
+                    {
+                        TieneAcceso = kvp.Value.Acceso,
+                        FuncionalidadesPermitidas = kvp.Value.Funcionalidades,
+                        RecursosEspecificosAllowed = kvp.Value.RecursosIds
+                    });
+                
+                employee.ModulosHabilitados = dto.Permisos
+                    .Where(p => p.Value.Acceso)
+                    .Select(p => p.Key)
+                    .ToList();
+            }
+
+            await _userRepository.UpdateAsync(employee);
+        }
+
+        public async Task UpdateEmployeeStatusAsync(string companyId, string employeeId, UserStatus nuevoEstado)
+        {
+            var employee = await ValidateEmployeeOwnership(companyId, employeeId);
+            employee.Estado = nuevoEstado.ToString();
+            await _userRepository.UpdateAsync(employee);
+        }
+
+        public async Task ResetEmployeePasswordAsync(string companyId, string employeeId, string newPassword)
+        {
+            var employee = await ValidateEmployeeOwnership(companyId, employeeId);
+            await _identityProvider.AdminResetPasswordAsync(employee.Id, newPassword);
+        }
+
+        public async Task UpdateEmployeeProfileAsync(string companyId, string employeeId, UpdateEmployeeProfileDto dto)
+        {
+            var employee = await ValidateEmployeeOwnership(companyId, employeeId);
+            if(employee.DatosPersonales == null)
+            {
+                employee.DatosPersonales = new PersonalProfile();
+            }
+
+            if(dto.Nombres != null) employee.DatosPersonales.Nombres = dto.Nombres;
+            if(dto.ApellidoPaterno != null) employee.DatosPersonales.ApellidoPaterno = dto.ApellidoPaterno;
+            if(dto.ApellidoMaterno != null) employee.DatosPersonales.ApellidoMaterno = dto.ApellidoMaterno;
+            if(dto.CI != null) employee.DatosPersonales.CI = dto.CI;
+            if(dto.Celular != null) employee.DatosPersonales.Celular = dto.Celular;
+            if(dto.Direccion != null) employee.DatosPersonales.Direccion = dto.Direccion;
+
+            await _userRepository.UpdateAsync(employee);
+        }
+
+        public async Task<List<PublicCommercialProfileDto>> GetCompanyPublicProfilesAsync(string companyId)
+        {
+            var company = await _userRepository.GetByIdAsync(companyId);
+            if (company == null || company.TipoUsuario != UserType.Empresa.ToString() || company.DatosEmpresa == null)
+            {
+                throw new KeyNotFoundException("Empresa no encontrada o no válida.");
+            }
+
+            return company.DatosEmpresa.PerfilesComerciales
+                .Where(p => p.Estado == CommercialProfileStatus.Activo)
+                .Select(p => new PublicCommercialProfileDto
+                {
+                    Id = p.Id,
+                    Nombre = p.NombreComercial,
+                    Tipo = p.Tipo.ToString(),
+                    LogoUrl = p.LogoUrl,
+                    RubroModulo = p.ModuloAsociado,
+                    Estrellas = p.CalificacionPromedio,
+                    TotalResenas = p.TotalResenas
+                })
+                .ToList();
         }
     }
 }

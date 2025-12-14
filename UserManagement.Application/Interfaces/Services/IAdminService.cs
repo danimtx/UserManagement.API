@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Admin;
+using UserManagement.Application.DTOs.Admin.Support;
 
 namespace UserManagement.Application.Interfaces.Services
 {
@@ -22,5 +23,11 @@ namespace UserManagement.Application.Interfaces.Services
         // --- Bandeja 4: Módulos Personales ---
         Task<List<PendingModuleDto>> GetPendingPersonalModulesAsync();
         Task DecideOnPersonalModuleAsync(PersonalModuleDecisionDto dto);
+
+        // --- Support & Moderation Module ---
+        Task<List<AdminUserSearchResultDto>> SearchUsersAsync(string term);
+        Task<AdminUserDetailDto> GetUserDetailAsync(string userId);
+        Task ChangeUserStatusAsync(string userId, AdminChangeStatusDto dto);
+        Task AdminResetUserPasswordAsync(string userId, string newPassword);
     }
 }

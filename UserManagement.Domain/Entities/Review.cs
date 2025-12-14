@@ -8,6 +8,7 @@ namespace UserManagement.Domain.Entities
         
         // Quién escribe la reseña
         public string AuthorId { get; set; } = string.Empty; 
+        public string AuthorDisplayName { get; set; } = string.Empty;
         
         // A quién se le escribe la reseña
         public string RecipientId { get; set; } = string.Empty;

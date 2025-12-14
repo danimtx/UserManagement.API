@@ -318,6 +318,27 @@ namespace UserManagement.Application.Services
             };
         }
 
+        public async Task ChangePasswordAsync(string userId, ChangePasswordDto dto)
+        {
+            if (dto.NewPassword != dto.ConfirmNewPassword)
+            {
+                throw new ArgumentException("Las contraseñas no coinciden.");
+            }
+
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException("El usuario no existe.");
+            }
+
+            // Verify the user's current password by trying to sign in.
+            // This will throw an UnauthorizedAccessException if it fails.
+            await _identityProvider.SignInAsync(user.Email, dto.CurrentPassword);
+
+            // If sign-in is successful, update the password.
+            await _identityProvider.UpdatePasswordAsync(userId, dto.NewPassword);
+        }
+
         private string DecodeFirebaseToken(string firebaseToken)
         {
             var handler = new JwtSecurityTokenHandler();

@@ -364,3 +364,301 @@ Endpoint for creating contextual reviews.
     }
     ```
 
+## 6. My Profile (Self-Management)
+
+Endpoints for a logged-in user to manage their own profile and security settings.
+
+### Get My Profile
+
+*   **Endpoint:** `GET /api/Users/profile/me`
+*   **Access:** Authenticated
+*   **Description (ES):** Obtiene el perfil completo y detallado del usuario actualmente logueado. La respuesta es polimórfica y cambia según el tipo de usuario (Personal, Empresa, etc.).
+*   **Description (EN):** Gets the full, detailed profile of the currently logged-in user. The response is polymorphic and changes depending on the user type (Personal, Company, etc.).
+*   **JSON Response Example (Personal User):**
+    ```json
+    {
+      "id": "user_id_123",
+      "email": "juan.perez@example.com",
+      "tipoUsuario": "Personal",
+      "estado": "Activo",
+      "fotoPerfilUrl": "https://example.com/photo.jpg",
+      "biografia": "Desarrollador de software con 5 años de experiencia.",
+      "datosPersonales": {
+        "nombreCompleto": "Juan Perez Gomez",
+        "ci": "XXXX567",
+        "celular": "77712345",
+        "direccion": "Av. Arce 2132"
+      },
+      "datosEmpresa": null
+    }
+    ```
+
+### Update My Profile
+
+*   **Endpoint:** `PUT /api/Users/profile/me`
+*   **Access:** Authenticated
+*   **Description (ES):** Actualiza datos no sensibles del perfil del usuario, como su foto, biografía o información de contacto. Permite actualizaciones parciales.
+*   **Description (EN):** Updates non-sensitive user profile data, such as photo, bio, or contact information. Allows for partial updates.
+*   **JSON Body Example:**
+    ```json
+    {
+      "biografia": "Desarrollador de software y entusiasta de la tecnología.",
+      "celular": "77754321"
+    }
+    ```
+
+### Change Password
+
+*   **Endpoint:** `POST /api/Auth/change-password`
+*   **Access:** Authenticated
+*   **Description (ES):** Permite a un usuario logueado cambiar su propia contraseña. Requiere la contraseña actual para verificación.
+*   **Description (EN):** Allows a logged-in user to change their own password. Requires the current password for verification.
+*   **JSON Body Example:**
+    ```json
+    {
+      "currentPassword": "Password123!",
+      "newPassword": "NewSecurePassword456!",
+      "confirmNewPassword": "NewSecurePassword456!"
+    }
+    ```
+
+## 7. Human Resources (Company Management)
+
+Endpoints for a company administrator to manage their employees (sub-accounts).
+
+### List Employees
+
+*   **Endpoint:** `GET /api/CompanyManagement/employees`
+*   **Access:** Authenticated Company Admins
+*   **Description (ES):** Obtiene una lista resumen de todos los empleados (sub-cuentas) que pertenecen a la empresa.
+*   **Description (EN):** Gets a summary list of all employees (sub-accounts) belonging to the company.
+*   **JSON Response Example:**
+    ```json
+    [
+      {
+        "id": "employee_id_1",
+        "nombreCompleto": "Carlos Solis",
+        "email": "empleado1@example.com",
+        "cargo": "Ventas",
+        "esSuperAdmin": false,
+        "estado": "Activo",
+        "fechaRegistro": "2023-10-01T10:00:00Z"
+      }
+    ]
+    ```
+
+### Get Employee Detail
+
+*   **Endpoint:** `GET /api/CompanyManagement/employees/{id}`
+*   **Access:** Authenticated Company Admins
+*   **Description (ES):** Obtiene la vista detallada de un empleado específico, incluyendo sus permisos.
+*   **Description (EN):** Gets the detailed view of a specific employee, including their permissions.
+*   **JSON Response Example:**
+    ```json
+    {
+      "id": "employee_id_1",
+      "nombreCompleto": "Carlos Solis",
+      "email": "empleado1@example.com",
+      "cargo": "Ventas",
+      // ...other summary fields...
+      "ci": "8889990",
+      "celular": "78899001",
+      "permisos": {
+        "Social": {
+          "acceso": true,
+          "funcionalidades": ["Publicar", "Moderar"],
+          "recursosIds": ["perfil_social_id_1"]
+        }
+      }
+    }
+    ```
+
+### Update Employee Permissions
+
+*   **Endpoint:** `PUT /api/CompanyManagement/employees/{id}/permissions`
+*   **Access:** Authenticated Company Admins
+*   **Description (ES):** Actualiza el área de trabajo y la matriz de permisos de un empleado.
+*   **Description (EN):** Updates an employee's work area and permissions matrix.
+*   **JSON Body Example:**
+    ```json
+    {
+      "areaTrabajo": "Líder de Ventas",
+      "esSuperAdmin": true,
+      "permisos": {
+        "Social": {
+          "acceso": true,
+          "funcionalidades": ["Publicar", "Moderar", "VerReportes"],
+          "recursosIds": ["perfil_social_id_1", "perfil_social_id_2"]
+        }
+      }
+    }
+    ```
+
+### Update Employee Status
+
+*   **Endpoint:** `PUT /api/CompanyManagement/employees/{id}/status`
+*   **Access:** Authenticated Company Admins
+*   **Description (ES):** Cambia el estado de un empleado (ej. `Activo`, `Suspendido`). Útil para despidos.
+*   **Description (EN):** Changes an employee's status (e.g., `Activo`, `Suspendido`). Useful for terminations.
+*   **JSON Body Example:**
+    ```json
+    {
+      "nuevoEstado": "Suspendido"
+    }
+    ```
+
+### Reset Employee Password
+
+*   **Endpoint:** `PUT /api/CompanyManagement/employees/{id}/reset-password`
+*   **Access:** Authenticated Company Admins
+*   **Description (ES):** Permite a un administrador de empresa resetear manualmente la contraseña de un empleado.
+*   **Description (EN):** Allows a company administrator to manually reset an employee's password.
+*   **JSON Body Example:**
+    ```json
+    {
+      "newPassword": "TemporaryPasswordForEmployee123!"
+    }
+    ```
+
+### Update Employee Profile
+
+*   **Endpoint:** `PUT /api/CompanyManagement/employees/{id}/profile`
+*   **Access:** Authenticated Company Admins
+*   **Description (ES):** Permite a un administrador corregir datos personales de un empleado (ej. errores de tipeo en el CI o Nombre).
+*   **Description (EN):** Allows an administrator to correct an employee's personal data (e.g., typos in ID or Name).
+*   **JSON Body Example:**
+    ```json
+    {
+      "nombres": "Carlos Alberto",
+      "ci": "8889991"
+    }
+    ```
+
+## 8. Discovery & Reviews (Public)
+
+Publicly accessible endpoints for finding users and seeing their reputation.
+
+### Public Search
+
+*   **Endpoint:** `GET /api/Users/public/search`
+*   **Access:** Public (`AllowAnonymous`)
+*   **Description (ES):** Buscador público de perfiles. Acepta un texto de búsqueda (`q`) y una ciudad opcional.
+*   **Description (EN):** Public profile search. Accepts a query text (`q`) and an optional city.
+*   **Example URL:** `/api/Users/public/search?q=Software&ciudad=Cochabamba`
+
+### Get Public User Profile
+
+*   **Endpoint:** `GET /api/Users/public/{userId}`
+*   **Access:** Public (`AllowAnonymous`)
+*   **Description (ES):** Obtiene la "tarjeta de presentación" pública de un usuario, ocultando datos sensibles.
+*   **Description (EN):** Gets the public "business card" of a user, hiding sensitive data.
+*   **JSON Response Example:**
+    ```json
+    {
+      "id": "user_id_123",
+      "tipoUsuario": "Personal",
+      "nombreMostrar": "Juan Perez",
+      "fotoUrl": "https://example.com/photo.jpg",
+      "biografia": "Desarrollador de software...",
+      "ciudad": "La Paz",
+      "esVerificado": true,
+      "contacto": {
+        "direccion": "Av. Arce 2132",
+        "telefono": "77712345"
+      },
+      "etiquetas": [
+        {
+          "nombre": "Ingeniero de Software",
+          "estrellas": 4.8,
+          "totalResenas": 25
+        }
+      ]
+    }
+    ```
+
+### Get Public Company Profiles
+
+*   **Endpoint:** `GET /api/CompanyManagement/profiles/{companyId}/public`
+*   **Access:** Public (`AllowAnonymous`)
+*   **Description (ES):** Lista los perfiles comerciales activos de una empresa específica.
+*   **Description (EN):** Lists the active commercial profiles for a specific company.
+
+### List Reviews
+
+*   **Endpoint:** `GET /api/Reviews`
+*   **Access:** Public (`AllowAnonymous`)
+*   **Description (ES):** Obtiene las reseñas para un `recipientId` y un `contextoId` (Tag o Perfil Comercial).
+*   **Description (EN):** Gets the reviews for a `recipientId` and `contextoId` (Tag or Commercial Profile).
+*   **Example URL:** `/api/Reviews?recipientId=user_id_123&contextoId=Ingeniero%20de%20Software`
+*   **JSON Response Example:**
+    ```json
+    [
+      {
+        "autorNombre": "Carlos Solis",
+        "rating": 5,
+        "comentario": "Excelente trabajo, muy recomendable.",
+        "fecha": "2023-11-20T15:30:00Z"
+      }
+    ]
+    ```
+
+## 9. Support & Moderation (SuperAdmin)
+
+High-privilege endpoints for system administrators.
+
+### Admin User Search
+
+*   **Endpoint:** `GET /api/Admin/users/search`
+*   **Access:** SuperAdmins (`AdminSistema`, `SuperAdminGlobal`)
+*   **Description (ES):** Búsqueda en cascada por un término exacto: Email > Username > CI > NIT.
+*   **Description (EN):** Cascading search for an exact term: Email > Username > CI > NIT.
+*   **Example URL:** `/api/Admin/users/search?term=juan.perez@example.com`
+
+### Get Full User Detail
+
+*   **Endpoint:** `GET /api/Admin/users/{id}`
+*   **Access:** SuperAdmins
+*   **Description (ES):** Obtiene el perfil completo de un usuario sin NINGÚN tipo de enmascaramiento o filtro de privacidad.
+*   **Description (EN):** Gets the complete user profile with NO privacy masking or filtering.
+*   **JSON Response Example:**
+    ```json
+    {
+      "id": "user_id_123",
+      "email": "juan.perez@example.com",
+      // ... all fields ...
+      "datosPersonales": {
+        "nombres": "Juan",
+        "apellidoPaterno": "Perez",
+        "ci": "1234567", // Unmasked
+        // ... all fields ...
+      }
+    }
+    ```
+
+### Admin Change User Status
+
+*   **Endpoint:** `PUT /api/Admin/users/{id}/status`
+*   **Access:** SuperAdmins
+*   **Description (ES):** Permite a un admin cambiar forzosamente el estado de cualquier usuario (ej. `Activo`, `Suspendido`, `Eliminado`).
+*   **Description (EN):** Allows an admin to forcibly change any user's status (e.g., `Activo`, `Suspendido`, `Eliminado`).
+*   **JSON Body Example:**
+    ```json
+    {
+      "nuevoEstado": "Suspendido",
+      "motivo": "Violación de términos de servicio."
+    }
+    ```
+
+### Admin Reset Password
+
+*   **Endpoint:** `PUT /api/Admin/users/{id}/reset-password`
+*   **Access:** SuperAdmins
+*   **Description (ES):** Permite a un admin resetear la contraseña de cualquier usuario sin necesidad de la contraseña actual.
+*   **Description (EN):** Allows an admin to reset any user's password without needing the current password.
+*   **JSON Body Example:**
+    ```json
+    {
+      "newPassword": "NewPasswordSetBySupport123!"
+    }
+    ```
+

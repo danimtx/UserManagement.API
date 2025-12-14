@@ -40,6 +40,26 @@ namespace UserManagement.Infrastructure.Services
             await _firebaseAuth.DeleteUserAsync(uid);
         }
 
+        public async Task UpdatePasswordAsync(string uid, string newPassword)
+        {
+            UserRecordArgs args = new UserRecordArgs()
+            {
+                Uid = uid,
+                Password = newPassword
+            };
+            await _firebaseAuth.UpdateUserAsync(args);
+        }
+
+        public async Task AdminResetPasswordAsync(string uid, string newPassword)
+        {
+            UserRecordArgs args = new UserRecordArgs()
+            {
+                Uid = uid,
+                Password = newPassword
+            };
+            await _firebaseAuth.UpdateUserAsync(args);
+        }
+
         public async Task<(string Token, string Uid, string RefreshToken)> SignInAsync(string email, string password)
         {
             var authUrl = $"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={_webApiKey}";

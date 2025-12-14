@@ -12,5 +12,6 @@ namespace UserManagement.Application.Interfaces.Services
         Task<string> RegisterCompanyAsync(RegisterCompanyDto dto);
         Task<AuthResponseDto> LoginAsync(LoginDto loginDto);
         Task<AuthResponseDto> RefreshTokenAsync(string refreshToken);
+        Task ChangePasswordAsync(string userId, ChangePasswordDto dto);
     }
 }

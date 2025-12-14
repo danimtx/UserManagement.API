@@ -13,6 +13,10 @@ namespace UserManagement.Application.Interfaces.Repositories
         Task AddAsync(User user);
         Task UpdateAsync(User user);
         Task<User?> GetByUserNameAsync(string username);
+        Task<User?> GetByCiAsync(string ci);
+        Task<User?> GetByNitAsync(string nit);
+        Task<List<User>> GetEmployeesByCompanyAsync(string companyId);
+        Task<List<User>> SearchUsersAsync(string query, string? ciudad);
         
         // --- Métodos para Admin (Optimizados con 'TieneSolicitudPendiente') ---
         Task<List<User>> GetPendingCompaniesAsync();
@@ -23,5 +27,6 @@ namespace UserManagement.Application.Interfaces.Repositories
         // --- Métodos para Reviews ---
         Task AddReviewAsync(Review review);
         Task<bool> HasUserReviewedContextAsync(string authorId, string recipientId, string contextId);
+        Task<List<Review>> GetReviewsByContextAsync(string recipientId, string contextoId);
     }
 }

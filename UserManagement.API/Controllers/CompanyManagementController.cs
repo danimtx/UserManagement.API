@@ -1,11 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Company;
+using UserManagement.Application.DTOs.Company.Employees;
+using UserManagement.Application.DTOs.Public; // Added
 using UserManagement.Application.Interfaces.Services;
+using UserManagement.Domain.Enums;
 
 namespace UserManagement.API.Controllers
 {
@@ -21,14 +24,14 @@ namespace UserManagement.API.Controllers
             _companyService = companyService;
         }
 
+        // --- Existing Endpoints ---
+
         [HttpPost("employees")]
         public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto dto)
         {
-            // Extraer ID del token (Seguridad)
-            var userIdClaim = User.FindFirst("user_id") ?? User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized("No se pudo identificar a la empresa.");
-            string companyId = userIdClaim.Value;
-
+            var companyId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (companyId == null) return Unauthorized("No se pudo identificar a la empresa.");
+            
             try
             {
                 var employeeId = await _companyService.CreateEmployeeAsync(companyId, dto);
@@ -39,58 +42,177 @@ namespace UserManagement.API.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+        
+        // --- New Employee Management Endpoints ---
 
-        [HttpPost("areas")]
-        public async Task<IActionResult> AddArea([FromBody] string areaName)
+        [HttpGet("employees")]
+        public async Task<IActionResult> GetEmployees()
         {
-            var userIdClaim = User.FindFirst("user_id") ?? User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized();
-            string companyId = userIdClaim.Value;
+            var companyId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(companyId)) return Unauthorized("No se pudo identificar a la empresa.");
 
             try
             {
-                await _companyService.AddCompanyAreaAsync(companyId, areaName);
-                return Ok(new { message = $"Área '{areaName}' agregada exitosamente." });
+                var employees = await _companyService.GetEmployeesAsync(companyId);
+                return Ok(employees);
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
             }
         }
 
-        [HttpPost("profiles/request")]
-        public async Task<IActionResult> RequestCommercialProfile([FromBody] RequestCommercialProfileDto dto)
+        [HttpGet("employees/{id}")]
+        public async Task<IActionResult> GetEmployeeDetail(string id)
         {
-            var userIdClaim = User.FindFirst("user_id") ?? User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized("No se pudo identificar a la empresa.");
-            string companyId = userIdClaim.Value;
+            var companyId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(companyId)) return Unauthorized("No se pudo identificar a la empresa.");
 
             try
             {
-                await _companyService.RequestCommercialProfileAsync(companyId, dto);
-                return Ok(new { message = "Solicitud de perfil comercial enviada para revisión." });
+                var employee = await _companyService.GetEmployeeDetailAsync(companyId, id);
+                return Ok(employee);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
             }
         }
 
-        [HttpPut("identity/rectify")]
-        public async Task<IActionResult> RectifyIdentity([FromBody] RectifyIdentityDto dto)
+        [HttpPut("employees/{id}/permissions")]
+        public async Task<IActionResult> UpdateEmployeePermissions(string id, [FromBody] UpdateEmployeePermissionsDto dto)
         {
-            var userIdClaim = User.FindFirst("user_id") ?? User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized("No se pudo identificar a la empresa.");
-            string companyId = userIdClaim.Value;
+            var companyId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(companyId)) return Unauthorized("No se pudo identificar a la empresa.");
+            
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
-                await _companyService.RectifyIdentityAsync(companyId, dto);
-                return Ok(new { message = "Identidad actualizada. Su perfil será revisado nuevamente." });
+                await _companyService.UpdateEmployeePermissionsAsync(companyId, id, dto);
+                return Ok(new { message = "Permisos del empleado actualizados." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("employees/{id}/status")]
+        public async Task<IActionResult> UpdateEmployeeStatus(string id, [FromBody] UpdateEmployeeStatusDto dto)
+        {
+            var companyId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(companyId)) return Unauthorized("No se pudo identificar a la empresa.");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                await _companyService.UpdateEmployeeStatusAsync(companyId, id, dto.NuevoEstado);
+                return Ok(new { message = $"Estado del empleado actualizado a {dto.NuevoEstado}." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("employees/{id}/reset-password")]
+        public async Task<IActionResult> ResetEmployeePassword(string id, [FromBody] ResetEmployeePasswordDto dto)
+        {
+            var companyId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(companyId)) return Unauthorized("No se pudo identificar a la empresa.");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                await _companyService.ResetEmployeePasswordAsync(companyId, id, dto.NewPassword);
+                return Ok(new { message = "La contraseña del empleado ha sido reseteada." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("employees/{id}/profile")]
+        public async Task<IActionResult> UpdateEmployeeProfile(string id, [FromBody] UpdateEmployeeProfileDto dto)
+        {
+            var companyId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(companyId)) return Unauthorized("No se pudo identificar a la empresa.");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                await _companyService.UpdateEmployeeProfileAsync(companyId, id, dto);
+                return Ok(new { message = "Perfil del empleado actualizado." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
+            }
+        }
+        
+        // --- Public Profile Endpoints ---
+
+        [AllowAnonymous]
+        [HttpGet("profiles/{companyId}/public")]
+        public async Task<IActionResult> GetCompanyPublicProfiles(string companyId)
+        {
+            try
+            {
+                var profiles = await _companyService.GetCompanyPublicProfilesAsync(companyId);
+                return Ok(profiles);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}" });
             }
         }
     }

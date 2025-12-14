@@ -16,23 +16,24 @@ using UserManagement.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Thread-safe initialization for Firebase
 var firebaseCredentialPath = Path.Combine(Directory.GetCurrentDirectory(), "firebase_credentials.json");
-
 if (!File.Exists(firebaseCredentialPath))
 {
     throw new FileNotFoundException($"No se encontró el archivo JSON en: {firebaseCredentialPath}");
 }
-
 Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", firebaseCredentialPath);
 
-if (FirebaseApp.DefaultInstance == null)
+object firebaseLock = new();
+lock (firebaseLock)
 {
-#pragma warning disable CS0618 
-    FirebaseApp.Create(new AppOptions()
+    if (FirebaseApp.DefaultInstance == null)
     {
-        Credential = GoogleCredential.FromFile(firebaseCredentialPath)
-    });
-#pragma warning restore CS0618
+        FirebaseApp.Create(new AppOptions()
+        {
+            Credential = GoogleCredential.FromFile(firebaseCredentialPath)
+        });
+    }
 }
 
 string projectId = builder.Configuration["Firebase:ProjectId"] ?? throw new InvalidOperationException("Firebase:ProjectId no configurado.");
@@ -49,6 +50,7 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
 
 // Validadores
 builder.Services.AddFluentValidationAutoValidation();

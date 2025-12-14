@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Review;
@@ -37,6 +38,27 @@ namespace UserManagement.Application.Services
                 throw new Exception("El destinatario de la reseña no fue encontrado.");
             }
 
+            // Fetch author user to get display name
+            var authorUser = await _userRepository.GetByIdAsync(authorId);
+            if (authorUser == null)
+            {
+                throw new Exception("El autor de la reseña no fue encontrado.");
+            }
+            string authorDisplayName = "";
+            if (authorUser.TipoUsuario == UserType.Personal.ToString() && authorUser.DatosPersonales != null)
+            {
+                authorDisplayName = $"{authorUser.DatosPersonales.Nombres} {authorUser.DatosPersonales.ApellidoPaterno}".Trim();
+            }
+            else if (authorUser.TipoUsuario == UserType.Empresa.ToString() && authorUser.DatosEmpresa != null)
+            {
+                authorDisplayName = authorUser.DatosEmpresa.RazonSocial;
+            }
+            else
+            {
+                authorDisplayName = authorUser.Email; // Fallback
+            }
+
+
             if (recipient.TipoUsuario == UserType.Personal.ToString())
             {
                 var personalProfile = recipient.DatosPersonales;
@@ -71,6 +93,7 @@ namespace UserManagement.Application.Services
             var review = new Review
             {
                 AuthorId = authorId,
+                AuthorDisplayName = authorDisplayName, // Set the display name
                 RecipientId = dto.RecipientId,
                 ContextoId = dto.ContextoId,
                 Rating = dto.Rating,
@@ -81,6 +104,19 @@ namespace UserManagement.Application.Services
             // Guardar la nueva reseña y actualizar el perfil del usuario calificado
             await _userRepository.AddReviewAsync(review);
             await _userRepository.UpdateAsync(recipient);
+        }
+
+        public async Task<List<ReviewDetailDto>> GetReviewsAsync(string recipientId, string contextId)
+        {
+            var reviews = await _userRepository.GetReviewsByContextAsync(recipientId, contextId);
+
+            return reviews.Select(r => new ReviewDetailDto
+            {
+                AutorNombre = r.AuthorDisplayName,
+                Rating = r.Rating,
+                Comentario = r.Comment,
+                Fecha = r.Timestamp
+            }).ToList();
         }
     }
 }

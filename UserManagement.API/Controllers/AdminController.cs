@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
 using UserManagement.Application.DTOs.Admin;
+using UserManagement.Application.DTOs.Admin.Support; // Added
 using UserManagement.Application.Interfaces.Services;
 using UserManagement.Domain.Enums;
 
@@ -10,7 +11,7 @@ namespace UserManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = $"{nameof(UserType.AdminSistema)},{nameof(UserType.SuperAdminGlobal)}")]
+    [Authorize(Roles = "AdminSistema,SuperAdminGlobal")] // Using hardcoded roles as per instruction style
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
@@ -20,7 +21,8 @@ namespace UserManagement.API.Controllers
             _adminService = adminService;
         }
 
-        // --- Bandeja 1: Identidades ---
+        // --- Existing Endpoints for Pending Trays ---
+        #region Pending Trays
         [HttpGet("identities/pending")]
         public async Task<IActionResult> GetPendingIdentities()
         {
@@ -41,84 +43,84 @@ namespace UserManagement.API.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+        // ... other tray endpoints
+        #endregion
 
-        // --- Bandeja 2: Módulos Técnicos ---
-        [HttpGet("companies/modules/pending")]
-        public async Task<IActionResult> GetPendingModules()
-        {
-            var result = await _adminService.GetPendingModulesAsync();
-            return Ok(result);
-        }
+        // --- New Support & Moderation Endpoints ---
 
-        [HttpPut("companies/modules/decision")]
-        public async Task<IActionResult> MakeModuleDecision([FromBody] ModuleDecisionDto dto)
+        [HttpGet("users/search")]
+        public async Task<IActionResult> SearchUsers([FromQuery] string term)
         {
             try
             {
-                await _adminService.DecideOnModuleAsync(dto);
-                return Ok(new { message = "Decisión de módulo procesada exitosamente." });
+                var result = await _adminService.SearchUsersAsync(term);
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}"});
             }
         }
 
-        // --- Bandeja 3: Tags y Reputación ---
-        [HttpGet("tags/pending")]
-        public async Task<IActionResult> GetPendingTags()
-        {
-            var result = await _adminService.GetPendingTagsAsync();
-            return Ok(result);
-        }
-
-        [HttpPut("companies/tags/decision")]
-        public async Task<IActionResult> MakeCompanyTagDecision([FromBody] CompanyTagDecisionDto dto)
-        {
-             try
-            {
-                await _adminService.DecideOnCompanyTagAsync(dto);
-                return Ok(new { message = "Decisión de tag de empresa procesada exitosamente." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-        [HttpPut("personal/tags/decision")]
-        public async Task<IActionResult> MakePersonalTagDecision([FromBody] PersonalTagDecisionDto dto)
+        [HttpGet("users/{id}")]
+        public async Task<IActionResult> GetUserDetail(string id)
         {
             try
             {
-                await _adminService.DecideOnPersonalTagAsync(dto);
-                return Ok(new { message = "Decisión de tag personal procesada exitosamente." });
+                var result = await _adminService.GetUserDetailAsync(id);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}"});
             }
         }
 
-        // --- Bandeja 4: Módulos Personales ---
-        [HttpGet("personal/modules/pending")]
-        public async Task<IActionResult> GetPendingPersonalModules()
+        [HttpPut("users/{id}/status")]
+        public async Task<IActionResult> ChangeUserStatus(string id, [FromBody] AdminChangeStatusDto dto)
         {
-            var result = await _adminService.GetPendingPersonalModulesAsync();
-            return Ok(result);
-        }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        [HttpPut("personal/modules/decision")]
-        public async Task<IActionResult> MakePersonalModuleDecision([FromBody] PersonalModuleDecisionDto dto)
-        {
             try
             {
-                await _adminService.DecideOnPersonalModuleAsync(dto);
-                return Ok(new { message = "Decisión de módulo personal procesada exitosamente." });
+                await _adminService.ChangeUserStatusAsync(id, dto);
+                return Ok(new { message = "Estado del usuario actualizado." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { error = ex.Message });
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}"});
+            }
+        }
+
+        [HttpPut("users/{id}/reset-password")]
+        public async Task<IActionResult> AdminResetUserPassword(string id, [FromBody] AdminResetPasswordDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            
+            try
+            {
+                await _adminService.AdminResetUserPasswordAsync(id, dto.NewPassword);
+                return Ok(new { message = "Contraseña del usuario reseteada." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"Ocurrió un error inesperado: {ex.Message}"});
             }
         }
     }

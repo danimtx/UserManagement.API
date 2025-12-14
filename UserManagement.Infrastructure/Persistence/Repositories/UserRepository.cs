@@ -1,4 +1,4 @@
-﻿using Google.Cloud.Firestore;
+using Google.Cloud.Firestore;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -22,6 +22,8 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
         {
             _firestoreDb = firestoreDb;
         }
+
+        #region Mappers
         private UserDocument ToDocument(User entity)
         {
             var json = JsonConvert.SerializeObject(entity, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
@@ -33,16 +35,22 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
             var json = JsonConvert.SerializeObject(doc, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             return JsonConvert.DeserializeObject<User>(json)!;
         }
-         private ReviewDocument ToReviewDocument(Review entity)
+        private ReviewDocument ToReviewDocument(Review entity)
         {
             var json = JsonConvert.SerializeObject(entity);
             return JsonConvert.DeserializeObject<ReviewDocument>(json)!;
         }
 
+        private Review ToReviewDomain(ReviewDocument doc)
+        {
+            var json = JsonConvert.SerializeObject(doc, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            return JsonConvert.DeserializeObject<Review>(json)!;
+        }
+        #endregion
+
         public async Task AddAsync(User user)
         {
             var doc = ToDocument(user);
-            // Ensure dates are UTC for Firestore
             doc.FechaRegistro = doc.FechaRegistro.ToUniversalTime();
             if (doc.DatosPersonales != null)
                 doc.DatosPersonales.FechaNacimiento = doc.DatosPersonales.FechaNacimiento.ToUniversalTime();
@@ -54,7 +62,7 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
 
         public async Task UpdateAsync(User user)
         {
-            await AddAsync(user); // SetAsync acts as an upsert, so it's fine for update
+            await AddAsync(user);
         }
 
         public async Task<User?> GetByIdAsync(string id)
@@ -82,6 +90,71 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
             return ToDomain(snapshot.Documents[0].ConvertTo<UserDocument>());
         }
 
+        public async Task<User?> GetByCiAsync(string ci)
+        {
+            var query = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.DatosPersonales) + "." + nameof(PersonalProfileDocument.CI), ci)
+                .Limit(1);
+            var snapshot = await query.GetSnapshotAsync();
+            if (snapshot.Count == 0) return null;
+            return ToDomain(snapshot.Documents[0].ConvertTo<UserDocument>());
+        }
+
+        public async Task<User?> GetByNitAsync(string nit)
+        {
+            var query = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.DatosEmpresa) + "." + nameof(CompanyProfileDocument.Nit), nit)
+                .Limit(1);
+            var snapshot = await query.GetSnapshotAsync();
+            if (snapshot.Count == 0) return null;
+            return ToDomain(snapshot.Documents[0].ConvertTo<UserDocument>());
+        }
+
+        public async Task<List<User>> GetEmployeesByCompanyAsync(string companyId)
+        {
+            var query = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.CreadoPorId), companyId)
+                .WhereEqualTo(nameof(UserDocument.TipoUsuario), UserType.SubCuentaEmpresa.ToString());
+            
+            var snapshot = await query.GetSnapshotAsync();
+            
+            return snapshot.Documents.Select(d => ToDomain(d.ConvertTo<UserDocument>())).ToList();
+        }
+
+        public async Task<List<User>> SearchUsersAsync(string query, string? ciudad)
+        {
+            string upperBound = query + "\uf8ff";
+
+            var companiesQuery = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.TipoUsuario), UserType.Empresa.ToString())
+                .WhereGreaterThanOrEqualTo(nameof(UserDocument.DatosEmpresa) + "." + nameof(CompanyProfileDocument.RazonSocial), query)
+                .WhereLessThan(nameof(UserDocument.DatosEmpresa) + "." + nameof(CompanyProfileDocument.RazonSocial), upperBound);
+
+            var personalQuery = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.TipoUsuario), UserType.Personal.ToString())
+                .WhereGreaterThanOrEqualTo(nameof(UserDocument.DatosPersonales) + "." + nameof(PersonalProfileDocument.Profesion), query)
+                .WhereLessThan(nameof(UserDocument.DatosPersonales) + "." + nameof(PersonalProfileDocument.Profesion), upperBound);
+
+            var companiesTask = companiesQuery.GetSnapshotAsync();
+            var personalTask = personalQuery.GetSnapshotAsync();
+
+            await Task.WhenAll(companiesTask, personalTask);
+
+            var allUsers = new List<User>();
+            allUsers.AddRange(companiesTask.Result.Documents.Select(d => ToDomain(d.ConvertTo<UserDocument>())));
+            allUsers.AddRange(personalTask.Result.Documents.Select(d => ToDomain(d.ConvertTo<UserDocument>())));
+            
+            if (!string.IsNullOrEmpty(ciudad))
+            {
+                allUsers = allUsers.Where(u => 
+                    (u.DatosPersonales?.Departamento.Equals(ciudad, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (u.DatosEmpresa?.Sucursales.Any(s => s.Departamento.Equals(ciudad, StringComparison.OrdinalIgnoreCase)) ?? false)
+                ).ToList();
+            }
+
+            return allUsers.DistinctBy(u => u.Id).ToList();
+        }
+        
         public async Task<List<User>> GetPendingCompaniesAsync()
         {
             var query = _firestoreDb.Collection(UserCollectionName)
@@ -90,7 +163,7 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
             var snapshot = await query.GetSnapshotAsync();
             return snapshot.Documents.Select(d => ToDomain(d.ConvertTo<UserDocument>())).ToList();
         }
-
+        
         public async Task<List<User>> GetCompaniesWithPendingModulesAsync()
         {
             var query = _firestoreDb.Collection(UserCollectionName)
@@ -155,6 +228,17 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
                 
             var snapshot = await query.GetSnapshotAsync();
             return snapshot.Count > 0;
+        }
+
+        public async Task<List<Review>> GetReviewsByContextAsync(string recipientId, string contextoId)
+        {
+            var query = _firestoreDb.Collection(ReviewCollectionName)
+                .WhereEqualTo(nameof(ReviewDocument.RecipientId), recipientId)
+                .WhereEqualTo(nameof(ReviewDocument.ContextoId), contextoId);
+    
+            var snapshot = await query.GetSnapshotAsync();
+            
+            return snapshot.Documents.Select(d => ToReviewDomain(d.ConvertTo<ReviewDocument>())).ToList();
         }
     }
 }
