@@ -18,5 +18,9 @@ namespace UserManagement.Application.Interfaces.Services
         Task<List<PendingTagDto>> GetPendingTagsAsync();
         Task DecideOnCompanyTagAsync(CompanyTagDecisionDto dto);
         Task DecideOnPersonalTagAsync(PersonalTagDecisionDto dto);
+
+        // --- Bandeja 4: Módulos Personales ---
+        Task<List<PendingModuleDto>> GetPendingPersonalModulesAsync();
+        Task DecideOnPersonalModuleAsync(PersonalModuleDecisionDto dto);
     }
 }

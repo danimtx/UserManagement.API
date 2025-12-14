@@ -93,9 +93,8 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
 
         public async Task<List<User>> GetCompaniesWithPendingModulesAsync()
         {
-            // Firestore cannot query for fields inside objects in an array.
-            // We fetch all active companies and filter in memory. This is not ideal for performance with many users.
             var query = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.TieneSolicitudPendiente), true)
                 .WhereEqualTo(nameof(UserDocument.TipoUsuario), UserType.Empresa.ToString())
                 .WhereEqualTo(nameof(UserDocument.Estado), UserStatus.Activo.ToString());
             
@@ -109,8 +108,8 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
 
         public async Task<List<User>> GetUsersWithPendingTagsAsync()
         {
-            // Similar to the above, we fetch all active users (Companies and Personal) and filter in memory.
             var query = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.TieneSolicitudPendiente), true)
                 .WhereEqualTo(nameof(UserDocument.Estado), UserStatus.Activo.ToString());
 
             var snapshot = await query.GetSnapshotAsync();
@@ -121,6 +120,21 @@ namespace UserManagement.Infrastructure.Persistence.Repositories
                     (u.DatosEmpresa?.PerfilesComerciales.Any(p => p.Tipo == CommercialProfileType.TagSocial && p.Estado == CommercialProfileStatus.Pendiente) ?? false) ||
                     (u.DatosPersonales?.Tags.Any(t => t.Estado == TagStatus.Pendiente) ?? false)
                 )
+                .ToList();
+        }
+
+        public async Task<List<User>> GetUsersWithPendingModuleRequestsAsync()
+        {
+            var query = _firestoreDb.Collection(UserCollectionName)
+                .WhereEqualTo(nameof(UserDocument.TieneSolicitudPendiente), true)
+                .WhereEqualTo(nameof(UserDocument.TipoUsuario), UserType.Personal.ToString())
+                .WhereEqualTo(nameof(UserDocument.Estado), UserStatus.Activo.ToString());
+
+            var snapshot = await query.GetSnapshotAsync();
+
+            return snapshot.Documents
+                .Select(d => ToDomain(d.ConvertTo<UserDocument>()))
+                .Where(u => u.DatosPersonales?.SolicitudesModulos.Any(m => m.Estado == ModuleRequestStatus.Pendiente) ?? false)
                 .ToList();
         }
 

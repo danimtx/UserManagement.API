@@ -37,5 +37,23 @@ namespace UserManagement.API.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+
+        [HttpPost("modules/request")]
+        public async Task<IActionResult> RequestModule([FromBody] RequestPersonalModuleDto dto)
+        {
+            var userIdClaim = User.FindFirst("user_id") ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized("No se pudo identificar al usuario.");
+            string userId = userIdClaim.Value;
+
+            try
+            {
+                await _userService.RequestModuleAsync(userId, dto);
+                return Ok(new { message = $"Solicitud para el módulo '{dto.NombreModulo}' enviada exitosamente." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }

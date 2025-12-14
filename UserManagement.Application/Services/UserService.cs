@@ -69,5 +69,36 @@ namespace UserManagement.Application.Services
             user.DatosPersonales.Tags.Add(newTag);
             await _userRepository.UpdateAsync(user);
         }
+
+        public async Task RequestModuleAsync(string userId, RequestPersonalModuleDto dto)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null) throw new Exception("Usuario no encontrado.");
+            if (user.TipoUsuario != UserType.Personal.ToString()) throw new Exception("Esta función solo está disponible para usuarios personales.");
+            if (user.DatosPersonales == null) throw new Exception("El perfil personal no está configurado.");
+
+            if (user.DatosPersonales.SolicitudesModulos.Any(m => m.NombreModulo.Equals(dto.NombreModulo, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new Exception($"Ya existe una solicitud para el módulo '{dto.NombreModulo}'.");
+            }
+
+            var newModuleRequest = new ModuleRequest
+            {
+                NombreModulo = dto.NombreModulo,
+                Estado = ModuleRequestStatus.Pendiente,
+                Evidencias = dto.DocumentosEvidencia.Select(e => new UploadedDocument
+                {
+                    TipoDocumento = e.Tipo,
+                    UrlArchivo = e.Url,
+                    FechaSubida = DateTime.UtcNow,
+                    EstadoValidacion = "Pendiente"
+                }).ToList()
+            };
+
+            user.DatosPersonales.SolicitudesModulos.Add(newModuleRequest);
+            user.TieneSolicitudPendiente = true;
+
+            await _userRepository.UpdateAsync(user);
+        }
     }
 }

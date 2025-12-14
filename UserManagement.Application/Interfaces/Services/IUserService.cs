@@ -6,5 +6,6 @@ namespace UserManagement.Application.Interfaces.Services
     public interface IUserService
     {
         Task RequestTagAsync(string userId, RequestTagDto dto);
+        Task RequestModuleAsync(string userId, RequestPersonalModuleDto dto);
     }
 }

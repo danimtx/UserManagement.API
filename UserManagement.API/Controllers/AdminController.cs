@@ -99,5 +99,27 @@ namespace UserManagement.API.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+
+        // --- Bandeja 4: Módulos Personales ---
+        [HttpGet("personal/modules/pending")]
+        public async Task<IActionResult> GetPendingPersonalModules()
+        {
+            var result = await _adminService.GetPendingPersonalModulesAsync();
+            return Ok(result);
+        }
+
+        [HttpPut("personal/modules/decision")]
+        public async Task<IActionResult> MakePersonalModuleDecision([FromBody] PersonalModuleDecisionDto dto)
+        {
+            try
+            {
+                await _adminService.DecideOnPersonalModuleAsync(dto);
+                return Ok(new { message = "Decisión de módulo personal procesada exitosamente." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }

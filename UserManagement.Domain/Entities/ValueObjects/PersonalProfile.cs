@@ -29,9 +29,9 @@ namespace UserManagement.Domain.Entities.ValueObjects
         public List<UploadedDocument> DocumentosSoporte { get; set; } = new();
 
         // --- Nuevos Campos de Reputación y Visibilidad ---
-        public string? Biografia { get; set; }
         public GeoLocation? UbicacionLaboral { get; set; }
         public bool DireccionVisible { get; set; } = false;
         public List<Tag> Tags { get; set; } = new List<Tag>();
+        public List<ModuleRequest> SolicitudesModulos { get; set; } = new();
     }
 }

@@ -14,10 +14,11 @@ namespace UserManagement.Application.Interfaces.Repositories
         Task UpdateAsync(User user);
         Task<User?> GetByUserNameAsync(string username);
         
-        // --- Métodos para Admin ---
+        // --- Métodos para Admin (Optimizados con 'TieneSolicitudPendiente') ---
         Task<List<User>> GetPendingCompaniesAsync();
         Task<List<User>> GetCompaniesWithPendingModulesAsync();
         Task<List<User>> GetUsersWithPendingTagsAsync();
+        Task<List<User>> GetUsersWithPendingModuleRequestsAsync();
 
         // --- Métodos para Reviews ---
         Task AddReviewAsync(Review review);

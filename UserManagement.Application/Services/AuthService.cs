@@ -187,16 +187,17 @@ namespace UserManagement.Application.Services
                     });
                 }
 
-                var solicitudes = new List<ModuleRequest>();
+                var perfilesComerciales = new List<PerfilComercial>();
                 if (dto.ModulosSolicitados != null)
                 {
                     foreach (var mod in dto.ModulosSolicitados)
                     {
-                        solicitudes.Add(new ModuleRequest
+                        perfilesComerciales.Add(new PerfilComercial
                         {
-                            NombreModulo = mod,
-                            Estado = "Pendiente",
-                            FechaSolicitud = DateTime.UtcNow
+                            NombreComercial = $"Perfil para {mod}", // Placeholder name
+                            Tipo = CommercialProfileType.Modulo,
+                            ModuloAsociado = mod,
+                            Estado = CommercialProfileStatus.Pendiente
                         });
                     }
                 }
@@ -211,8 +212,8 @@ namespace UserManagement.Application.Services
 
                     TipoUsuario = UserType.Empresa.ToString(),
                     Estado = UserStatus.Pendiente.ToString(),
+                    TieneSolicitudPendiente = perfilesComerciales.Any(),
                     ModulosHabilitados = new List<string>(),
-                    SolicitudesModulos = solicitudes,
                     FechaRegistro = DateTime.UtcNow,
 
                     DatosEmpresa = new CompanyProfile
@@ -238,7 +239,8 @@ namespace UserManagement.Application.Services
 
                         DocumentosLegales = docsLegales,
                         Sucursales = sucursales,
-                        AreasDefinidas = new List<string> { "General", "Administración" }
+                        AreasDefinidas = new List<string> { "General", "Administración" },
+                        PerfilesComerciales = perfilesComerciales
                     },
 
                     IdsPerfilesSociales = new List<string>()

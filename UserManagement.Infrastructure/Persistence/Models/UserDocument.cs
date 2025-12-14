@@ -12,6 +12,8 @@ namespace UserManagement.Infrastructure.Persistence.Models
         [FirestoreProperty] public string Id { get; set; } = string.Empty;
         [FirestoreProperty] public string Email { get; set; } = string.Empty;
         [FirestoreProperty] public string FotoPerfilUrl { get; set; } = string.Empty;
+        [FirestoreProperty] public string? Biografia { get; set; }
+        [FirestoreProperty] public bool TieneSolicitudPendiente { get; set; } = false;
         [FirestoreProperty] public string? UserName { get; set; }
         [FirestoreProperty] public string TipoUsuario { get; set; } = string.Empty;
         [FirestoreProperty] public string Estado { get; set; } = string.Empty;
@@ -28,7 +30,6 @@ namespace UserManagement.Infrastructure.Persistence.Models
         [FirestoreProperty] public SystemAdminPermissionsDocument? PermisosAdminSistema { get; set; }
 
         [FirestoreProperty] public List<string> ModulosHabilitados { get; set; } = new();
-        [FirestoreProperty] public List<ModuleRequestDocument> SolicitudesModulos { get; set; } = new();
         [FirestoreProperty] public List<string> FuncionalidadesExtra { get; set; } = new();
         [FirestoreProperty] public List<string> IdsRecursosExternos { get; set; } = new();
         [FirestoreProperty] public List<string> IdsPerfilesSociales { get; set; } = new();
@@ -54,10 +55,10 @@ namespace UserManagement.Infrastructure.Persistence.Models
         [FirestoreProperty] public List<UploadedDocumentDocument> DocumentosSoporte { get; set; } = new();
 
         // --- Nuevos Campos ---
-        [FirestoreProperty] public string? Biografia { get; set; }
         [FirestoreProperty] public GeoLocationDocument? UbicacionLaboral { get; set; }
         [FirestoreProperty] public bool DireccionVisible { get; set; } = false;
         [FirestoreProperty] public List<TagDocument> Tags { get; set; } = new();
+        [FirestoreProperty] public List<ModuleRequestDocument> SolicitudesModulos { get; set; } = new();
     }
 
     [FirestoreData]
@@ -140,8 +141,8 @@ namespace UserManagement.Infrastructure.Persistence.Models
     public class ModuleRequestDocument
     {
         [FirestoreProperty] public string NombreModulo { get; set; } = string.Empty;
-        [FirestoreProperty] public string Estado { get; set; } = "Pendiente";
-        [FirestoreProperty] public DateTime FechaSolicitud { get; set; }
+        [FirestoreProperty] public int Estado { get; set; } = 0; // 0 = Pendiente, 1 = Aprobado, 3 = Rechazado
         [FirestoreProperty] public string? MotivoRechazo { get; set; }
+        [FirestoreProperty] public List<UploadedDocumentDocument> Evidencias { get; set; } = new();
     }
 }

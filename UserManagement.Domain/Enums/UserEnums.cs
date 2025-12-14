@@ -45,4 +45,11 @@ namespace UserManagement.Domain.Enums
         Modulo = 0,
         TagSocial = 1
     }
+
+    public enum ModuleRequestStatus
+    {
+        Pendiente = 0,
+        Aprobado = 1,
+        Rechazado = 3
+    }
 }

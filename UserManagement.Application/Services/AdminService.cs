@@ -166,5 +166,67 @@ namespace UserManagement.Application.Services
             tag.Estado = dto.Approve ? TagStatus.Activo : TagStatus.Rechazado;
             await _userRepository.UpdateAsync(user);
         }
+
+        // --- Bandeja 4: Módulos Personales ---
+        public async Task<List<PendingModuleDto>> GetPendingPersonalModulesAsync()
+        {
+            var users = await _userRepository.GetUsersWithPendingModuleRequestsAsync();
+            var pendingModules = new List<PendingModuleDto>();
+
+            foreach (var user in users)
+            {
+                if (user.DatosPersonales == null) continue;
+
+                var moduleRequests = user.DatosPersonales.SolicitudesModulos
+                    .Where(m => m.Estado == ModuleRequestStatus.Pendiente);
+
+                foreach (var request in moduleRequests)
+                {
+                    pendingModules.Add(new PendingModuleDto
+                    {
+                        CompanyUserId = user.Id, // Re-using this field for PersonalUserId
+                        CompanyName = $"{user.DatosPersonales.Nombres} {user.DatosPersonales.ApellidoPaterno}", // Re-using for personal name
+                        CommercialProfileId = request.NombreModulo, // Re-using for module name
+                        ProfileName = request.NombreModulo,
+                        ModuleName = request.NombreModulo,
+                        RequestDate = request.Evidencias.FirstOrDefault()?.FechaSubida ?? DateTime.MinValue
+                    });
+                }
+            }
+            return pendingModules;
+        }
+
+        public async Task DecideOnPersonalModuleAsync(PersonalModuleDecisionDto dto)
+        {
+            var user = await _userRepository.GetByIdAsync(dto.PersonalUserId);
+            if (user == null || user.DatosPersonales == null) throw new Exception("Usuario personal no encontrado.");
+
+            var moduleRequest = user.DatosPersonales.SolicitudesModulos.FirstOrDefault(m => m.NombreModulo.Equals(dto.ModuleName, StringComparison.OrdinalIgnoreCase));
+            if (moduleRequest == null) throw new Exception("Solicitud de módulo no encontrada.");
+
+            moduleRequest.Estado = dto.Approve ? ModuleRequestStatus.Aprobado : ModuleRequestStatus.Rechazado;
+            moduleRequest.MotivoRechazo = dto.Approve ? null : dto.RejectionReason;
+
+            if (dto.Approve)
+            {
+                if (!user.ModulosHabilitados.Contains(dto.ModuleName))
+                {
+                    user.ModulosHabilitados.Add(dto.ModuleName);
+                }
+            }
+
+            // Recalcular si quedan solicitudes pendientes
+            bool hasPending = user.DatosPersonales.Tags.Any(t => t.Estado == TagStatus.Pendiente) ||
+                              user.DatosPersonales.SolicitudesModulos.Any(m => m.Estado == ModuleRequestStatus.Pendiente);
+            
+            if (user.DatosEmpresa != null)
+            {
+                hasPending = hasPending || user.DatosEmpresa.PerfilesComerciales.Any(p => p.Estado == CommercialProfileStatus.Pendiente);
+            }
+
+            user.TieneSolicitudPendiente = hasPending;
+
+            await _userRepository.UpdateAsync(user);
+        }
     }
 }

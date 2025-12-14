@@ -12,6 +12,8 @@ namespace UserManagement.Domain.Entities
         public string Email { get; set; } = string.Empty;
         public string? UserName { get; set; }
         public string FotoPerfilUrl { get; set; } = string.Empty;
+        public string? Biografia { get; set; }
+        public bool TieneSolicitudPendiente { get; set; } = false;
         public string TipoUsuario { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
         public DateTime FechaRegistro { get; set; }
@@ -34,7 +36,6 @@ namespace UserManagement.Domain.Entities
 
         // --- ACCESO GLOBAL ---
         public List<string> ModulosHabilitados { get; set; } = new();
-        public List<ModuleRequest> SolicitudesModulos { get; set; } = new();
         public List<string> FuncionalidadesExtra { get; set; } = new();
         public List<string> IdsRecursosExternos { get; set; } = new();
         public List<string> IdsPerfilesSociales { get; set; } = new();
