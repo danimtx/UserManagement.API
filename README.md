@@ -18,6 +18,6 @@ Documentación detallada para desarrolladores Frontend y Backend.
 ### 🧪 Calidad y Pruebas (QA)
 Escenarios End-to-End para validar flujos de negocio.
 * 🇬🇧 **[QA Testing Plan (English)](docs/QA_TESTING_PLAN.md)**
-* 🇪🇸 **[Plan de Pruebas QA (Español)](docs/QA_TESTING_PLAN_es.md)**
+* 🇪🇸 **[Plan de Pruebas QA (Español)](docs/QA_TESTING_PLAN_ES.md)**
 
 ---
