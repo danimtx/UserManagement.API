@@ -13,11 +13,11 @@ Para entender la arquitectura, endpoints y planes de prueba, consulta nuestra do
 ### 🛠️ Guía Técnica (Endpoints)
 Documentación detallada para desarrolladores Frontend y Backend.
 * 🇬🇧 **[API Reference (English)](docs/API_REFERENCE.md)**
-* 🇪🇸 **[Referencia API (Español)](docs/API_REFERENCE.es.md)**
+* 🇪🇸 **[Referencia API (Español)](docs/API_REFERENCE_ES.md)**
 
 ### 🧪 Calidad y Pruebas (QA)
 Escenarios End-to-End para validar flujos de negocio.
 * 🇬🇧 **[QA Testing Plan (English)](docs/QA_TESTING_PLAN.md)**
-* 🇪🇸 **[Plan de Pruebas QA (Español)](docs/QA_TESTING_PLAN.es.md)**
+* 🇪🇸 **[Plan de Pruebas QA (Español)](docs/QA_TESTING_PLAN_es.md)**
 
 ---
