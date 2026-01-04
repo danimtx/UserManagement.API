@@ -191,12 +191,17 @@ Endpoints for companies to manage their structure, employees, and commercial pro
         },
         "Inventario": {
           "acceso": true,
-          "funcionalidades": ["VerStock", "SolicitarProducto"],
+          "funcionalidades": [],
           "recursosIds": []
         }
       }
     }
     ```
+> **⚠️ Architecture Rule (Total Delegation):**
+> For external business modules (like `Construction.API`), `UserManagement`'s responsibility is strictly limited to **Access (On/Off)**.
+> * `acceso`: `true` (Enables the menu button).
+> * `funcionalidades`: Send `[]` (Empty). Roles (e.g., Engineer, Resident) are defined in the target microservice.
+> * `recursosIds`: Send `[]` (Empty). Project/Resource assignment is handled in the target microservice.
 
 ### Request Commercial Profile
 
@@ -596,7 +601,7 @@ Publicly accessible endpoints for finding users and seeing their reputation.
       {
         "autorNombre": "Carlos Solis",
         "rating": 5,
-        "comentario": "Excelente trabajo, muy recomendable.",
+        "comentario": "Excellent work, very professional and recommended.",
         "fecha": "2023-11-20T15:30:00Z"
       }
     ]
@@ -662,3 +667,368 @@ High-privilege endpoints for system administrators.
     }
     ```
 
+## 10. Mi Perfil (Self-Management)
+
+Endpoints for a logged-in user to manage their own profile and security settings.
+
+### `GET /api/Users/profile/me`
+*   **Desc:** Obtiene el perfil completo del usuario logueado. Respuesta polimórfica (Personal/Empresa/Empleado).
+*   **Desc (EN):** Retrieves the complete profile of the logged-in user. Polymorphic response (Personal/Company/Employee).
+
+    **JSON Response Example (Personal User):**
+    ```json
+    {
+      "id": "user_id_123",
+      "email": "user.email@example.com",
+      "userType": "Personal",
+      "status": "Active",
+      "profilePictureUrl": "https://example.com/profile/picture.jpg",
+      "bio": "Experienced software engineer with a passion for innovation.",
+      "personalData": {
+        "fullName": "John Doe",
+        "ci": "1234567",
+        "phoneNumber": "77788990",
+        "address": "Av. Principal #123"
+      }
+    }
+    ```
+
+    **JSON Response Example (Company User):**
+    ```json
+    {
+      "id": "company_id_456",
+      "email": "company.email@example.com",
+      "userType": "Company",
+      "status": "Active",
+      "companyName": "Tech Solutions Inc.",
+      "legalName": "Tech Solutions S.R.L.",
+      "nit": "987654321",
+      "corporatePhoneNumber": "21234567",
+      "branches": [
+        {
+          "name": "Headquarters",
+          "address": "Calle Falsa #456",
+          "city": "La Paz"
+        }
+      ]
+    }
+    ```
+
+### `PUT /api/Users/profile/me`
+*   **Desc:** Actualiza datos no sensibles (Foto, Bio, Celular, Dirección).
+*   **Desc (EN):** Updates non-sensitive data (Photo, Bio, Phone, Address).
+
+    **JSON Body Example:**
+    ```json
+    {
+      "profilePictureUrl": "https://example.com/new_picture.jpg",
+      "bio": "Updated bio: Always learning and growing.",
+      "phoneNumber": "77711223",
+      "address": "Av. Secundaria #456"
+    }
+    ```
+
+### `POST /api/Auth/change-password`
+*   **Desc:** Cambia la contraseña. Requiere `CurrentPassword` y `NewPassword`.
+*   **Desc (EN):** Changes the password. Requires `CurrentPassword` and `NewPassword`.
+
+    **JSON Body Example:**
+    ```json
+    {
+      "currentPassword": "OldSecurePassword1!",
+      "newPassword": "NewSecurePassword2@",
+      "confirmNewPassword": "NewSecurePassword2@"
+    }
+    ```
+
+## 11. Recursos Humanos (Company Management)
+
+### `GET /api/CompanyManagement/employees`
+*   **Desc:** Lista todos los empleados (sub-cuentas) de la empresa.
+*   **Desc (EN):** Lists all employees (sub-accounts) of the company.
+
+    **JSON Response Example:**
+    ```json
+    [
+      {
+        "id": "employee_id_1",
+        "fullName": "Jane Smith",
+        "email": "jane.smith@company.com",
+        "workArea": "Marketing",
+        "status": "Active"
+      },
+      {
+        "id": "employee_id_2",
+        "fullName": "Peter Jones",
+        "email": "peter.jones@company.com",
+        "workArea": "Sales",
+        "status": "Active"
+      }
+    ]
+    ```
+
+### `GET /api/CompanyManagement/employees/{id}`
+*   **Desc:** Ver detalle y permisos de un empleado específico.
+*   **Desc (EN):** View details and permissions of a specific employee.
+
+    **JSON Response Example:**
+    ```json
+    {
+      "id": "employee_id_1",
+      "fullName": "Jane Smith",
+      "email": "jane.smith@company.com",
+      "ci": "11223344",
+      "workArea": "Marketing",
+      "isSuperAdmin": false,
+      "permissions": {
+        "Social": {
+          "access": true,
+          "functionalities": ["CreatePost", "ManageComments"]
+        },
+        "Analytics": {
+          "access": true,
+          "functionalities": ["ViewReports"]
+        }
+      }
+    }
+    ```
+
+### `PUT /api/CompanyManagement/employees/{id}/permissions`
+*   **Desc:** Reasigna área de trabajo y permisos de acceso.
+*   **Desc (EN):** Reassigns work area and access permissions.
+
+    **JSON Body Example:**
+    ```json
+    {
+      "workArea": "Senior Marketing",
+      "isSuperAdmin": true,
+      "permissions": {
+        "Social": {
+          "access": true,
+          "functionalities": ["CreatePost", "ManageComments", "ApproveContent"]
+        },
+        "Analytics": {
+          "access": true,
+          "functionalities": ["ViewReports", "ExportData"]
+        }
+      }
+    }
+    ```
+
+### `PUT /api/CompanyManagement/employees/{id}/status`
+*   **Desc:** Suspende (Despido) o Reactiva un empleado.
+*   **Desc (EN):** Suspends (Dismissal) or Reactivates an employee.
+
+    **JSON Body Example:**
+    ```json
+    {
+      "newStatus": "Suspended"
+    }
+    ```
+
+### `PUT /api/CompanyManagement/employees/{id}/reset-password`
+*   **Desc:** (Admin Empresa) Resetea la contraseña de un empleado manualmente.
+*   **Desc (EN):** (Company Admin) Manually resets an employee's password.
+
+    **JSON Body Example:**
+    ```json
+    {
+      "newPassword": "EmployeeNewPass123!"
+    }
+    ```
+
+### `PUT /api/CompanyManagement/employees/{id}/profile`
+*   **Desc:** (Admin Empresa) Corrige datos personales del empleado (CI, Nombre).
+*   **Desc (EN):** (Company Admin) Corrects employee's personal data (ID, Name).
+
+    **JSON Body Example:**
+    ```json
+    {
+      "fullName": "Jane A. Smith",
+      "ci": "11223345"
+    }
+    ```
+
+## 12. Discovery & Reviews (Public)
+
+### `GET /api/Users/public/search`
+*   **Desc:** Buscador público. Params: `q` (texto), `ciudad`. Retorna Personas y Empresas.
+*   **Desc (EN):** Public search engine. Params: `q` (text), `city`. Returns People and Companies.
+
+    **Example URL:** `/api/Users/public/search?q=developer&ciudad=Cochabamba`
+
+    **JSON Response Example:**
+    ```json
+    [
+      {
+        "id": "user_id_1",
+        "name": "Alice Wonderland",
+        "type": "Personal",
+        "description": "Software developer specializing in web applications.",
+        "profileImageUrl": "https://example.com/profile/alice.jpg"
+      },
+      {
+        "id": "company_id_2",
+        "name": "Global Tech Solutions",
+        "type": "Company",
+        "description": "Leading tech company offering IT services.",
+        "profileImageUrl": "https://example.com/profile/globaltech.jpg"
+      }
+    ]
+    ```
+
+### `GET /api/Users/public/{userId}`
+*   **Desc:** Tarjeta de presentación pública. Oculta datos sensibles según privacidad.
+*   **Desc (EN):** Public business card. Hides sensitive data according to privacy settings.
+
+    **JSON Response Example:**
+    ```json
+    {
+      "id": "user_id_123",
+      "name": "John Doe",
+      "userType": "Personal",
+      "bio": "Passionate about open-source projects and contributing to the community.",
+      "city": "La Paz",
+      "contactInfo": {
+        "email": "john.doe.public@example.com"
+      },
+      "publicTags": [
+        {
+          "tagName": "Web Developer",
+          "rating": 4.9,
+          "reviewCount": 50
+        }
+      ]
+    }
+    ```
+
+### `GET /api/CompanyManagement/profiles/{companyId}/public`
+*   **Desc:** Lista sucursales y perfiles comerciales activos de una empresa.
+*   **Desc (EN):** Lists active branches and commercial profiles of a company.
+
+    **JSON Response Example:**
+    ```json
+    [
+      {
+        "profileId": "commercial_profile_1",
+        "profileName": "Main Branch Services",
+        "description": "General IT services for businesses.",
+        "address": "Av. Ayacucho #100",
+        "phoneNumber": "22233445",
+        "avgRating": 4.7,
+        "totalReviews": 120
+      },
+      {
+        "profileId": "commercial_profile_2",
+        "profileName": "Software Development Division",
+        "description": "Custom software solutions.",
+        "address": "Calle Comercio #200",
+        "phoneNumber": "22255667",
+        "avgRating": 4.9,
+        "totalReviews": 80
+      }
+    ]
+    ```
+
+### `GET /api/Reviews`
+*   **Desc:** Lista reseñas. Params: `recipientId`, `contextId`.
+*   **Desc (EN):** Lists reviews. Params: `recipientId`, `contextId`.
+
+    **Example URL:** `/api/Reviews?recipientId=user_id_123&contextId=Web%20Developer`
+
+    **JSON Response Example:**
+    ```json
+    [
+      {
+        "reviewId": "review_id_1",
+        "reviewerName": "Client A",
+        "rating": 5,
+        "comment": "Excellent work, delivered on time and exceeded expectations.",
+        "date": "2023-11-01T10:00:00Z"
+      },
+      {
+        "reviewId": "review_id_2",
+        "reviewerName": "Client B",
+        "rating": 4,
+        "comment": "Good communication, minor delays but overall satisfied.",
+        "date": "2023-10-25T14:30:00Z"
+      }
+    ]
+    ```
+
+## 13. Soporte y Moderación (SuperAdmin)
+
+### `GET /api/Admin/users/search`
+*   **Desc:** Búsqueda por Email, CI, NIT o Username.
+*   **Desc (EN):** Search by Email, ID, NIT, or Username.
+
+    **Example URL:** `/api/Admin/users/search?query=admin@example.com`
+
+    **JSON Response Example:**
+    ```json
+    [
+      {
+        "id": "user_id_123",
+        "email": "admin@example.com",
+        "username": "adminUser",
+        "fullName": "Admin One",
+        "userType": "Admin",
+        "status": "Active"
+      }
+    ]
+    ```
+
+### `GET /api/Admin/users/{id}`
+*   **Desc:** Ver perfil completo SIN censura (incluye docs y datos privados).
+*   **Desc (EN):** View full uncensored profile (includes documents and private data).
+
+    **JSON Response Example:**
+    ```json
+    {
+      "id": "user_id_123",
+      "email": "juan.perez@example.com",
+      "username": "juan.perez",
+      "userType": "Personal",
+      "status": "Active",
+      "personalData": {
+        "fullName": "Juan Perez Gomez",
+        "ci": "1234567",
+        "dateOfBirth": "1990-05-15T00:00:00Z",
+        "address": "Av. Arce 2132",
+        "phoneNumber": "77712345",
+        "emergencyContact": "Maria Perez - 77700011"
+      },
+      "documents": [
+        {
+          "type": "IdentityCard",
+          "url": "https://firebasestorage.googleapis.com/id_card.jpg",
+          "status": "Approved"
+        }
+      ],
+      "privateNotes": "User has a history of suspicious login attempts."
+    }
+    ```
+
+### `PUT /api/Admin/users/{id}/status`
+*   **Desc:** Banear/Suspender o Reactivar cualquier usuario.
+*   **Desc (EN):** Ban/Suspend or Reactivate any user.
+
+    **JSON Body Example:**
+    ```json
+    {
+      "newStatus": "Banned",
+      "reason": "Repeated violations of terms of service."
+    }
+    ```
+
+### `PUT /api/Admin/users/{id}/reset-password`
+*   **Desc:** (Soporte) Reseteo de emergencia de contraseña.
+*   **Desc (EN):** (Support) Emergency password reset.
+
+    **JSON Body Example:**
+    ```json
+    {
+      "newPassword": "EmergencyResetPass#123",
+      "notifyUser": true
+    }
+    ```

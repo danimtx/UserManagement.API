@@ -130,6 +130,28 @@ Se usa para validar roles, oficios y categorías en el Marketplace/Red Social.
     * `"Electricista"` -> Requiere: Certificado/Título Técnico.
 * **Regla:** Estos documentos validan la "Insignia" pública.
 
+## 8. Estrategia de Integración con Otros Microservicios (Bounded Contexts)
+
+Para mantener la escalabilidad y evitar un monolito distribuido, `UserManagement.API` sigue reglas estrictas sobre qué información comparte y qué información ignora.
+
+### 8.1 El Rol de "Portero" (Gatekeeper)
+`UserManagement` es responsable de la **Autenticación (AuthN)** y la **Autorización Global (AuthZ Nivel 1)**.
+* **Sabe:** Quién es el usuario (`UserId`, `Email`).
+* **Sabe:** Qué módulos ha contratado/activado la empresa (ej. `ModulosHabilitados: ["Construccion", "RecursosHumanos"]`).
+* **Sabe:** El Rol Genérico del empleado (ej. "Ingeniero", "Contador").
+
+### 8.2 Lo que NO hace (Soberanía de Datos)
+`UserManagement` **NO almacena ni gestiona permisos de recursos específicos** de otros dominios.
+* **Ejemplo:** `UserManagement` sabe que Juan es "Ingeniero" y tiene acceso al módulo "Construcción".
+* **Pero NO sabe:** Que Juan es el "Residente de Obra" del "Edificio Los Pinos".
+* **Por qué:** Esa información pertenece a la base de datos del microservicio `Construction.API` (tabla `ProjectMembers`).
+
+### 8.3 Flujo de Token (Handshake)
+1.  El Frontend solicita Login a `UserManagement`.
+2.  Recibe un Token JWT con claims globales (`Roles`, `ModulosHabilitados`).
+3.  El Frontend usa ese Token para llamar a `Construction.API`.
+4.  `Construction.API` valida el Token, extrae el `UserId` y consulta **sus propias tablas** para determinar los permisos granulares sobre una obra específica.
+
 ---
 
 ### Resumen de Mapeo (Guía para Frontend/Agentes)
